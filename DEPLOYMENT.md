@@ -1,33 +1,38 @@
-# Nasazení veřejné verze
+# Nasazení zdarma
 
-Tahle aplikace je jednoduchá Node webová aplikace bez přihlášení. Každý, kdo má veřejný odkaz, může data číst i upravovat.
+Aplikace je webová PWA bez přihlášení. Každý, kdo má veřejný odkaz, vidí a může upravovat stejná data.
 
-## Doporučené nasazení
+Doporučená free varianta:
 
-Použij hosting, který umí:
+- **Supabase Free** pro společná data.
+- **Vercel Free** pro veřejný web.
 
-- spustit Node server přes `npm start`,
-- držet persistentní disk/souborové uložiště.
+## 1. Supabase databáze
 
-Vhodné jsou například Render nebo Railway.
+V Supabase otevři projekt a jdi do:
 
-## Nastavení
+`SQL Editor` -> `New query`
 
-Start command:
+Vlož obsah souboru `SUPABASE_SETUP.sql` a spusť `Run`.
 
-```bash
-npm start
-```
+Tím vznikne tabulka `public.app_state`, ve které je uložený jeden společný stav celé aplikace.
 
-Environment variables:
+## 2. Vercel hosting
 
-```bash
-NODE_ENV=production
-DATA_DIR=/data
-```
+Na Vercelu zvol:
 
-`DATA_DIR` musí ukazovat na persistentní disk. Do něj se bude ukládat soubor `shared-state.json` se společnými daty všech trenérů.
+`Add New` -> `Project` -> importuj GitHub repo `malymatymoc-max/makrocyklusacs`.
+
+Není potřeba žádný placený persistent disk. Aplikace běží jako statický web a data ukládá do Supabase.
+
+## 3. Kontrola
+
+Po nasazení otevři veřejnou URL z Vercelu. V horní liště by se po načtení mělo zobrazit:
+
+`Sdíleno přes Supabase`
+
+Pokud je tam `Lokální režim`, obvykle ještě není spuštěný SQL skript v Supabase nebo se nenačetl `config.js`.
 
 ## Důležité
 
-Bez persistentního disku se data mohou při restartu hostingu ztratit. Pro ostré používání tedy nepoužívat hosting, který nemá trvalé uložiště pro `shared-state.json`.
+Tahle verze je záměrně bez přihlášení. Publishable Supabase klíč je veřejný a pravidla v `SUPABASE_SETUP.sql` dovolují číst i upravovat data každému, kdo má odkaz na aplikaci.
