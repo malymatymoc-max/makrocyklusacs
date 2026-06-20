@@ -9,7 +9,7 @@
     <title>Makrocyklus</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=115" />
+    <link rel="stylesheet" href="./styles.css?v=116" />
   </head>
   <body>
     <div class="app">
@@ -34,7 +34,7 @@
         <header class="topbar">
           <label>Tým<select id="teamSelect"></select></label>
           <label>Sezóna<select id="seasonSelect"></select></label>
-          <label>Období / fáze<select id="periodSelect"></select></label>
+          <label style="display: none">Období / fáze<select id="periodSelect"></select></label>
           <span id="syncStatus" class="sync-status">Lokální režim</span>
           <button id="newSession" class="primary" type="button">+ Nová TJ</button>
         </header>
@@ -175,8 +175,9 @@
       </div>
     </dialog>
 
-    <script src="./config.js?v=115"></script>
-    <script src="./app.js?v=115"></script>
-    <script src="./progress-fix.js?v=115"></script>
+    <script src="./config.js?v=116"></script>
+    <script src="./app.js?v=116"></script>
+    <script src="./progress-fix.js?v=116"></script>
+    <script src="./phase-model.js?v=116"></script>
   </body>
 </html>
