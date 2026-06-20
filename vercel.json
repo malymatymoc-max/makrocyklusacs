@@ -16,6 +16,7 @@
     { "src": "phase-model.js", "use": "@vercel/static" },
     { "src": "team-scope.js", "use": "@vercel/static" },
     { "src": "calendar-teams.js", "use": "@vercel/static" },
+    { "src": "training-requirements.js", "use": "@vercel/static" },
     { "src": "local-ui-state.js", "use": "@vercel/static" },
     { "src": "sync-diagnostics.js", "use": "@vercel/static" },
     { "src": "styles.css", "use": "@vercel/static" },

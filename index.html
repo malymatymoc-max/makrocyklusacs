@@ -9,7 +9,7 @@
     <title>Makrocyklus</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=126" />
+    <link rel="stylesheet" href="./styles.css?v=127" />
     <style>
       .topbar { grid-template-columns: minmax(260px, 1.4fr) minmax(160px, .8fr) auto auto; }
       .team-picker-label { min-width: 0; }
@@ -22,6 +22,8 @@
       .sync-status { align-self: center; width: 12px; height: 12px; min-height: 12px; padding: 0; border: 0; border-radius: 999px; background: var(--red); color: transparent; font-size: 0; box-shadow: 0 0 0 4px rgba(204,61,61,.12); overflow: hidden; }
       .sync-status.online { background: var(--green); box-shadow: 0 0 0 4px rgba(0,122,61,.14); }
       .sync-status.saving { background: var(--amber); box-shadow: 0 0 0 4px rgba(210,138,22,.16); }
+      .event strong { display: flex; align-items: center; gap: 6px; }
+      .event-warnings { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #fff0da; color: #8a5600; font-size: 11px; line-height: 1; font-weight: 900; }
       @media (max-width: 760px) { .topbar { grid-template-columns: 1fr; } }
     </style>
   </head>
@@ -193,13 +195,14 @@
       </div>
     </dialog>
 
-    <script src="./config.js?v=126"></script>
-    <script src="./app.js?v=126"></script>
-    <script src="./progress-fix.js?v=126"></script>
-    <script src="./phase-model.js?v=126"></script>
-    <script src="./team-scope.js?v=126"></script>
-    <script src="./calendar-teams.js?v=126"></script>
-    <script src="./local-ui-state.js?v=126"></script>
-    <script src="./sync-diagnostics.js?v=126"></script>
+    <script src="./config.js?v=127"></script>
+    <script src="./app.js?v=127"></script>
+    <script src="./progress-fix.js?v=127"></script>
+    <script src="./phase-model.js?v=127"></script>
+    <script src="./team-scope.js?v=127"></script>
+    <script src="./calendar-teams.js?v=127"></script>
+    <script src="./training-requirements.js?v=127"></script>
+    <script src="./local-ui-state.js?v=127"></script>
+    <script src="./sync-diagnostics.js?v=127"></script>
   </body>
 </html>
