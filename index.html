@@ -9,7 +9,17 @@
     <title>Makrocyklus</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=122" />
+    <link rel="stylesheet" href="./styles.css?v=123" />
+    <style>
+      .topbar { grid-template-columns: minmax(260px, 1.4fr) minmax(160px, .8fr) auto auto; }
+      .legacy-team-select { display: none; }
+      .team-picker-label { min-width: 0; }
+      .team-multi { display: flex; flex-wrap: wrap; gap: 7px; min-height: 38px; align-items: center; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+      .team-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 7px; background: #f7faf7; color: var(--text); font-size: 12px; font-weight: 850; cursor: pointer; }
+      .team-pill.active { border-color: rgba(0,122,61,.5); background: rgba(0,122,61,.1); color: var(--green); }
+      .team-pill input { width: 14px; height: 14px; padding: 0; accent-color: var(--green); }
+      @media (max-width: 760px) { .topbar { grid-template-columns: 1fr; } }
+    </style>
   </head>
   <body>
     <div class="app">
@@ -32,7 +42,7 @@
 
       <main class="main">
         <header class="topbar">
-          <label>Tým<select id="teamSelect"></select></label>
+          <label class="team-picker-label">Kategorie<select id="teamSelect" class="legacy-team-select"></select><div id="teamMultiSelect" class="team-multi"></div></label>
           <label>Sezóna<select id="seasonSelect"></select></label>
           <label style="display: none">Období / fáze<select id="periodSelect"></select></label>
           <span id="syncStatus" class="sync-status">Lokální režim</span>
@@ -52,10 +62,6 @@
             </section>
 
             <aside class="panel month-panel">
-              <div class="team-filter">
-                <strong>Zobrazit týmy</strong>
-                <div id="calendarTeamFilter" class="team-filter-list"></div>
-              </div>
               <div class="panel-header">
                 <button id="prevMonth" class="icon-btn" type="button">‹</button>
                 <div><h2 id="monthTitle"></h2><p>Měsíční přehled</p></div>
@@ -109,6 +115,10 @@
       <form id="newSessionForm">
         <div class="dialog-head"><h2>Nová TJ / událost</h2><button id="newSessionClose" type="button">×</button></div>
         <div class="dialog-body">
+          <div class="form-row">
+            <label>Kategorie<select name="teamId" required></select></label>
+            <label>Sezóna<select name="seasonId" required></select></label>
+          </div>
           <div class="form-row">
             <label>Datum<input name="date" type="date" required /></label>
             <label>Typ<select name="type"></select></label>
@@ -179,12 +189,12 @@
       </div>
     </dialog>
 
-    <script src="./config.js?v=122"></script>
-    <script src="./app.js?v=122"></script>
-    <script src="./progress-fix.js?v=122"></script>
-    <script src="./phase-model.js?v=122"></script>
-    <script src="./team-scope.js?v=122"></script>
-    <script src="./calendar-teams.js?v=122"></script>
-    <script src="./sync-diagnostics.js?v=122"></script>
+    <script src="./config.js?v=123"></script>
+    <script src="./app.js?v=123"></script>
+    <script src="./progress-fix.js?v=123"></script>
+    <script src="./phase-model.js?v=123"></script>
+    <script src="./team-scope.js?v=123"></script>
+    <script src="./calendar-teams.js?v=123"></script>
+    <script src="./sync-diagnostics.js?v=123"></script>
   </body>
 </html>
