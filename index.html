@@ -9,7 +9,7 @@
     <title>Makrocyklus</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=118" />
+    <link rel="stylesheet" href="./styles.css?v=119" />
   </head>
   <body>
     <div class="app">
@@ -52,6 +52,10 @@
             </section>
 
             <aside class="panel month-panel">
+              <div class="team-filter">
+                <strong>Zobrazit týmy</strong>
+                <div id="calendarTeamFilter" class="team-filter-list"></div>
+              </div>
               <div class="panel-header">
                 <button id="prevMonth" class="icon-btn" type="button">‹</button>
                 <div><h2 id="monthTitle"></h2><p>Měsíční přehled</p></div>
@@ -175,10 +179,11 @@
       </div>
     </dialog>
 
-    <script src="./config.js?v=118"></script>
-    <script src="./app.js?v=118"></script>
-    <script src="./progress-fix.js?v=118"></script>
-    <script src="./phase-model.js?v=118"></script>
-    <script src="./team-scope.js?v=118"></script>
+    <script src="./config.js?v=119"></script>
+    <script src="./app.js?v=119"></script>
+    <script src="./progress-fix.js?v=119"></script>
+    <script src="./phase-model.js?v=119"></script>
+    <script src="./team-scope.js?v=119"></script>
+    <script src="./calendar-teams.js?v=119"></script>
   </body>
 </html>
