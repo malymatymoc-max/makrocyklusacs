@@ -1,0 +1,746 @@
+const STORAGE_KEY = "makrocyklus-mvp-v1";
+const TYPES = ["TJ", "Skupinový TJ", "Pohybový TJ", "Utkání", "Turnaj", "Jiná událost", "Volno"];
+const SYNC_URL = "/api/state";
+
+const uid = (prefix) => `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => [...document.querySelectorAll(selector)];
+
+let state = load();
+let weekStart = monday(new Date());
+let monthCursor = firstOfMonth(new Date());
+let selectedSessionId = "";
+let dialog = { type: "", id: "" };
+let remoteUpdatedAt = 0;
+let remoteEnabled = false;
+let applyingRemote = false;
+let saveTimer = 0;
+
+const els = {
+  team: $("#teamSelect"),
+  season: $("#seasonSelect"),
+  period: $("#periodSelect"),
+  weekTitle: $("#weekTitle"),
+  monthTitle: $("#monthTitle"),
+  contextLine: $("#contextLine"),
+  grid: $("#calendarGrid"),
+  monthGrid: $("#monthGrid"),
+  form: $("#sessionForm"),
+  hint: $("#editorHint"),
+  mainGoal: $("#mainGoalSelect"),
+  extraGoals: $("#extraGoalChips"),
+  details: $("#detailChips"),
+  ratings: $("#ratings"),
+  stats: $("#progressStrip"),
+  syncStatus: $("#syncStatus"),
+  scope: $("#fulfillmentScope"),
+  fulfillment: $("#fulfillmentGrid"),
+  dialogEl: $("#dialog"),
+  dialogForm: $("#dialogForm"),
+  dialogTitle: $("#dialogTitle"),
+  dialogBody: $("#dialogBody"),
+  dialogDelete: $("#dialogDelete"),
+  newSessionEl: $("#newSessionDialog"),
+  newSessionForm: $("#newSessionForm"),
+  sessionEl: $("#sessionDialog"),
+  deleteSeries: $("#deleteSeries"),
+};
+
+init();
+
+function init() {
+  bind();
+  render();
+  startSync();
+  registerServiceWorker();
+}
+
+function bind() {
+  $$(".nav-btn").forEach((btn) => btn.addEventListener("click", () => showView(btn.dataset.view)));
+  $("#prevWeek").addEventListener("click", () => {
+    weekStart = addDays(weekStart, -7);
+    monthCursor = firstOfMonth(weekStart);
+    render();
+  });
+  $("#nextWeek").addEventListener("click", () => {
+    weekStart = addDays(weekStart, 7);
+    monthCursor = firstOfMonth(weekStart);
+    render();
+  });
+  $("#todayBtn").addEventListener("click", () => {
+    weekStart = monday(new Date());
+    monthCursor = firstOfMonth(new Date());
+    render();
+  });
+  $("#prevMonth").addEventListener("click", () => {
+    monthCursor = addMonths(monthCursor, -1);
+    renderMonth();
+  });
+  $("#nextMonth").addEventListener("click", () => {
+    monthCursor = addMonths(monthCursor, 1);
+    renderMonth();
+  });
+  $("#newSession").addEventListener("click", () => openNewSessionDialog(dateKey(new Date())));
+  $("#quickSession").addEventListener("click", () => openNewSessionDialog(dateKey(new Date())));
+  $("#quickPeriod").addEventListener("click", () => openDialog("period"));
+  $("#deleteSession").addEventListener("click", deleteSelectedSession);
+  els.deleteSeries.addEventListener("click", deleteSelectedSeries);
+  els.team.addEventListener("change", () => {
+    state.selectedTeamId = els.team.value;
+    state.selectedSeasonId = seasons().at(0)?.id || "";
+    state.selectedPeriodId = "all";
+    selectedSessionId = "";
+    save();
+    render();
+  });
+  els.season.addEventListener("change", () => {
+    state.selectedSeasonId = els.season.value;
+    state.selectedPeriodId = "all";
+    selectedSessionId = "";
+    save();
+    render();
+  });
+  els.period.addEventListener("change", () => {
+    state.selectedPeriodId = els.period.value;
+    save();
+    render();
+  });
+  els.scope.addEventListener("change", () => renderFulfillment());
+  els.form.addEventListener("input", updateSession);
+  els.mainGoal.addEventListener("change", updateMainGoal);
+  $("[data-create='goal']").addEventListener("click", () => openEntityFromSession("goal"));
+  $("[data-create='detail']").addEventListener("click", () => openEntityFromSession("detail"));
+  els.newSessionForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    saveNewSessionDialog();
+  });
+  $("#newSessionClose").addEventListener("click", () => els.newSessionEl.close());
+  $("#newSessionCancel").addEventListener("click", () => els.newSessionEl.close());
+  $("#sessionClose").addEventListener("click", () => els.sessionEl.close());
+  $("#sessionDone").addEventListener("click", () => els.sessionEl.close());
+  els.dialogForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    saveDialog();
+  });
+  $("#dialogSave").addEventListener("click", saveDialog);
+  $("#dialogClose").addEventListener("click", () => els.dialogEl.close());
+  $("#dialogCancel").addEventListener("click", () => els.dialogEl.close());
+  els.dialogDelete.addEventListener("click", deleteDialogEntity);
+}
+
+function render() {
+  ensureSelection();
+  renderSelectors();
+  renderCalendar();
+  renderMonth();
+  renderEditor();
+  renderStats();
+  renderFulfillmentScope();
+  renderFulfillment();
+  renderSetup();
+}
+
+function renderSelectors() {
+  els.team.innerHTML = `<option value="">Vyber tým</option>${state.teams.map(option).join("")}`;
+  els.team.value = state.selectedTeamId;
+  els.season.innerHTML = `<option value="">Vyber sezonu</option>${seasons().map(option).join("")}`;
+  els.season.value = state.selectedSeasonId;
+  els.period.innerHTML = `<option value="all">Všechna období</option>${periods().map((p) => `<option value="${p.id}">${esc(p.name)} · ${fmt(p.start)}-${fmt(p.end)}</option>`).join("")}`;
+  els.period.value = state.selectedPeriodId || "all";
+  const teamName = team()?.name || "bez týmu";
+  const seasonName = season()?.name || "bez sezony";
+  els.contextLine.textContent = `${teamName} · ${seasonName}`;
+}
+
+function renderCalendar() {
+  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  els.weekTitle.textContent = `${long(days[0])} - ${long(days[6])}`;
+  els.grid.innerHTML = days
+    .map((day) => {
+      const key = dateKey(day);
+      const daySessions = visibleSessions().filter((s) => s.date === key);
+      return `<article class="day" data-date="${key}" title="Dvojklikem vytvoříš novou událost">
+        <div class="day-head">${weekday(day)}<span>${long(day)}</span></div>
+        <div class="day-events">${daySessions.length ? daySessions.map(sessionCard).join("") : `<div class="empty-day">Bez události<span>Dvojklik pro přidání</span></div>`}</div>
+      </article>`;
+    })
+    .join("");
+  $$(".day").forEach((day) => day.addEventListener("dblclick", (event) => {
+    if (event.target.closest("[data-session]")) return;
+    openNewSessionDialog(day.dataset.date);
+  }));
+  $$("[data-session]").forEach((btn) => btn.addEventListener("click", () => {
+    selectedSessionId = btn.dataset.session;
+    render();
+    openSessionDialog();
+  }));
+}
+
+function renderMonth() {
+  const start = firstOfMonth(monthCursor);
+  const firstGridDay = monday(start);
+  const month = start.getMonth();
+  els.monthTitle.textContent = new Intl.DateTimeFormat("cs-CZ", { month: "long", year: "numeric" }).format(start);
+  els.monthGrid.innerHTML = Array.from({ length: 42 }, (_, i) => {
+    const day = addDays(firstGridDay, i);
+    const key = dateKey(day);
+    const count = visibleSessions().filter((s) => s.date === key).length;
+    const isOutside = day.getMonth() !== month;
+    const isSelectedWeek = key >= dateKey(weekStart) && key <= dateKey(addDays(weekStart, 6));
+    return `<button class="month-day ${isOutside ? "outside" : ""} ${isSelectedWeek ? "week-mark" : ""}" data-month-date="${key}" type="button">
+      <span>${day.getDate()}</span>${count ? `<i>${count}</i>` : ""}
+    </button>`;
+  }).join("");
+  $$("[data-month-date]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      weekStart = monday(new Date(`${btn.dataset.monthDate}T12:00:00`));
+      monthCursor = firstOfMonth(new Date(`${btn.dataset.monthDate}T12:00:00`));
+      render();
+    });
+    btn.addEventListener("dblclick", () => openNewSessionDialog(btn.dataset.monthDate));
+  });
+}
+
+function sessionCard(s) {
+  const goal = goalById(s.mainGoalId)?.name || "Bez cíle";
+  const klass = ["Utkání", "Turnaj"].includes(s.type) ? "match" : "";
+  return `<button class="event ${klass} ${s.id === selectedSessionId ? "active" : ""}" data-session="${s.id}" type="button">
+    <strong>${esc(s.startTime || "")} ${esc(s.type)}</strong>
+    <span>${esc(goal)}</span>
+    <span>${esc(s.place || "Bez místa")}</span>
+  </button>`;
+}
+
+function renderEditor() {
+  const s = sessionById(selectedSessionId);
+  $("#deleteSession").disabled = !s;
+  els.deleteSeries.disabled = !s || seriesSessions(s).length <= 1;
+  els.form.querySelectorAll("input, select, textarea, button").forEach((el) => {
+    if (!el.dataset.create) el.disabled = !s;
+  });
+  if (!s) {
+    els.hint.textContent = state.selectedTeamId && state.selectedSeasonId ? "Vyber TJ v kalendáři nebo vytvoř novou." : "Nejdřív vytvoř tým a sezonu.";
+    els.form.reset();
+    els.form.elements.type.innerHTML = TYPES.map((t) => `<option>${t}</option>`).join("");
+    els.mainGoal.innerHTML = `<option>Bez TJ</option>`;
+    els.extraGoals.innerHTML = `<div class="muted">Vyber TJ.</div>`;
+    els.details.innerHTML = `<div class="muted">Vyber TJ.</div>`;
+    els.ratings.innerHTML = `<div class="muted">Vyber TJ.</div>`;
+    return;
+  }
+  els.hint.textContent = long(new Date(`${s.date}T12:00:00`));
+  els.form.elements.date.value = s.date;
+  els.form.elements.type.innerHTML = TYPES.map((t) => `<option>${t}</option>`).join("");
+  els.form.elements.type.value = s.type;
+  els.form.elements.startTime.value = s.startTime || "";
+  els.form.elements.endTime.value = s.endTime || "";
+  els.form.elements.place.value = s.place || "";
+  els.form.elements.coach.value = s.coach || "";
+  els.form.elements.note.value = s.note || "";
+  renderGoalSelect(s);
+  renderExtraGoals(s);
+  renderDetails(s);
+  renderRatings(s);
+}
+
+function renderGoalSelect(s) {
+  const suggested = suggestedGoalsForSession(s);
+  const other = state.goals.filter((g) => !suggested.some((x) => x.id === g.id));
+  els.mainGoal.innerHTML = `<option value="">Vyber hlavní cíl</option>
+    ${suggested.length ? `<optgroup label="Doporučené">${suggested.map(option).join("")}</optgroup>` : ""}
+    ${other.length ? `<optgroup label="Ostatní">${other.map(option).join("")}</optgroup>` : ""}`;
+  els.mainGoal.value = s.mainGoalId || "";
+}
+
+function renderExtraGoals(s) {
+  els.extraGoals.innerHTML = state.goals.length ? state.goals
+    .filter((g) => g.id !== s.mainGoalId)
+    .map((g) => chip(g, s.extraGoalIds.includes(g.id), "extra-goal"))
+    .join("") : `<div class="muted">Nejdřív vytvoř cíle.</div>`;
+  $$("[data-extra-goal]").forEach((btn) => btn.addEventListener("click", () => toggleSessionArray("extraGoalIds", btn.dataset.extraGoal)));
+}
+
+function renderDetails(s) {
+  const suggested = suggestedDetailsForSession(s);
+  const other = state.details.filter((d) => !suggested.some((x) => x.id === d.id));
+  const html = [
+    suggested.length ? `<div class="muted">Doporučené podle cíle</div>${suggested.map((d) => chip(d, s.detailIds.includes(d.id), "detail")).join("")}` : "",
+    other.length ? `<div class="muted">Další z knihovny</div>${other.map((d) => chip(d, s.detailIds.includes(d.id), "detail")).join("")}` : "",
+  ].join("");
+  els.details.innerHTML = html || `<div class="muted">Nejdřív vytvoř detaily.</div>`;
+  $$("[data-detail]").forEach((btn) => btn.addEventListener("click", () => toggleSessionArray("detailIds", btn.dataset.detail)));
+}
+
+function renderRatings(s) {
+  const goalIds = [s.mainGoalId, ...s.extraGoalIds].filter(Boolean);
+  const detailIds = s.detailIds;
+  const goalRows = goalIds.map((id) => ratingRow("goal", id, goalById(id)?.name || "", s.goalRatings[id] || 0)).join("");
+  const detailRows = detailIds.map((id) => ratingRow("detail", id, detailById(id)?.name || "", s.detailRatings[id] || 0)).join("");
+  els.ratings.innerHTML = `${goalRows || `<div class="muted">Bez cíle k hodnocení.</div>`}${detailRows || ""}`;
+  $$("[data-rate]").forEach((btn) => btn.addEventListener("click", () => setRating(btn.dataset.kind, btn.dataset.id, Number(btn.dataset.rate))));
+}
+
+function ratingRow(kind, id, name, value) {
+  return `<div class="rating-row"><strong>${esc(name)}</strong>${Array.from({ length: 10 }, (_, i) => {
+    const n = i + 1;
+    return `<button class="${value === n ? "active" : ""}" data-kind="${kind}" data-id="${id}" data-rate="${n}" type="button">${n}</button>`;
+  }).join("")}</div>`;
+}
+
+function renderStats() {
+  const p = progress();
+  els.stats.innerHTML = [
+    stat("Cíle", `${p.doneGoals}/${p.totalGoals}`, p.totalGoals ? p.doneGoals / p.totalGoals : 0),
+    stat("Detaily", `${p.doneDetails}/${p.totalDetails}`, p.totalDetails ? p.doneDetails / p.totalDetails : 0),
+    stat("TJ v sezoně", sessions().length, sessions().length ? sessions().filter((s) => hasRatings(s)).length / sessions().length : 0),
+    stat("Období", periods().length, periods().length ? p.periodsWithTraining / periods().length : 0),
+  ].join("");
+}
+
+function stat(label, value, ratio) {
+  return `<article class="stat"><strong>${value}</strong><span>${label}</span><div class="bar"><span style="width:${Math.round(ratio * 100)}%"></span></div></article>`;
+}
+
+function renderFulfillmentScope() {
+  els.scope.innerHTML = `<option value="season">Celá sezona</option>${periods().map(option).join("")}`;
+  if (!els.scope.value) els.scope.value = "season";
+}
+
+function renderFulfillment() {
+  const scope = els.scope.value || "season";
+  const goalIds = scope === "season" ? [...new Set(periods().flatMap((p) => p.goalIds))] : periodById(scope)?.goalIds || [];
+  const detailIds = [...new Set(goalIds.flatMap((id) => goalById(id)?.detailIds || []))];
+  const cards = [
+    ...goalIds.map((id) => circleCard(goalById(id)?.name || "", completion("goal", id), "Cíl TJ")),
+    ...detailIds.map((id) => circleCard(detailById(id)?.name || "", completion("detail", id), "Detail")),
+  ];
+  els.fulfillment.innerHTML = cards.length ? cards.join("") : `<div class="muted">Zatím nejsou přiřazené cíle ani detaily.</div>`;
+}
+
+function circleCard(name, pct, label) {
+  const color = pct >= 85 ? "#007a3d" : pct >= 45 ? "#d28a16" : "#9aa5a0";
+  return `<article class="circle-card"><div class="circle" style="--pct:${pct};--color:${color}"><span>${Math.round(pct)}%</span></div><strong>${esc(name)}</strong><small>${label}</small></article>`;
+}
+
+function renderSetup() {
+  renderSetupTable("teams", "Týmy", state.teams, ["name"]);
+  renderSetupTable("seasons", "Sezony", seasons(), ["name"]);
+  renderSetupTable("periods", "Období makrocyklu", periods(), ["name", "start", "end"]);
+  renderSetupTable("goals", "Cíle TJ", state.goals, ["name"]);
+  renderSetupTable("details", "Detaily TJ", state.details, ["name"]);
+}
+
+function renderSetupTable(key, title, rows, cols) {
+  const panel = $(`[data-section="${key}"]`);
+  panel.innerHTML = `<div class="panel-header"><div><h2>${title}</h2><p>${rows.length} položek</p></div><button class="mini" data-add="${key}" type="button">+ Přidat</button></div>
+    <table><thead><tr>${cols.map((c) => `<th>${label(c)}</th>`).join("")}<th>Akce</th></tr></thead>
+    <tbody>${rows.length ? rows.map((r) => `<tr>${cols.map((c) => `<td>${esc(display(r, c))}</td>`).join("")}<td><div class="row-actions"><button class="mini" data-edit="${key}" data-id="${r.id}" type="button">Upravit</button></div></td></tr>`).join("") : `<tr><td colspan="${cols.length + 1}">Prázdné.</td></tr>`}</tbody></table>`;
+  panel.querySelector("[data-add]").addEventListener("click", () => openDialog(entityFromKey(key)));
+  panel.querySelectorAll("[data-edit]").forEach((btn) => btn.addEventListener("click", () => openDialog(entityFromKey(btn.dataset.edit), btn.dataset.id)));
+}
+
+function updateSession(event) {
+  const s = selectedSession();
+  if (!s || !event.target.name) return;
+  s[event.target.name] = event.target.value;
+  if (event.target.name === "date") {
+    weekStart = monday(new Date(`${s.date}T12:00:00`));
+    s.periodId = periodForDate(s.date)?.id || "";
+  }
+  save();
+  renderCalendar();
+  renderStats();
+  renderFulfillment();
+}
+
+function updateMainGoal() {
+  const s = selectedSession();
+  if (!s) return;
+  s.mainGoalId = els.mainGoal.value;
+  s.goalRatings[s.mainGoalId] ??= 0;
+  save();
+  render();
+}
+
+function toggleSessionArray(key, id) {
+  const s = selectedSession();
+  s[key] = s[key].includes(id) ? s[key].filter((x) => x !== id) : [...s[key], id];
+  if (key === "extraGoalIds") s.goalRatings[id] ??= 0;
+  if (key === "detailIds") s.detailRatings[id] ??= 0;
+  save();
+  render();
+}
+
+function setRating(kind, id, value) {
+  const s = selectedSession();
+  const key = kind === "goal" ? "goalRatings" : "detailRatings";
+  s[key][id] = value;
+  save();
+  render();
+}
+
+function openNewSessionDialog(date) {
+  if (!state.selectedTeamId || !state.selectedSeasonId) {
+    showView("setup");
+    openDialog(!state.selectedTeamId ? "team" : "season");
+    return;
+  }
+  els.newSessionForm.reset();
+  els.newSessionForm.elements.date.value = date;
+  els.newSessionForm.elements.type.innerHTML = TYPES.map((t) => `<option>${t}</option>`).join("");
+  els.newSessionForm.elements.type.value = "TJ";
+  els.newSessionForm.elements.repeatUntil.value = season()?.end || date;
+  els.newSessionEl.showModal();
+}
+
+function saveNewSessionDialog() {
+  const formData = new FormData(els.newSessionForm);
+  const data = Object.fromEntries(formData.entries());
+  const dates = repeatDates(data.date, formData.has("repeat") ? data.repeatUntil : "");
+  const repeatGroupId = dates.length > 1 ? uid("repeat") : "";
+  let firstId = "";
+  dates.forEach((date) => {
+    const s = makeSession({
+      date,
+      type: data.type || "TJ",
+      startTime: data.startTime || "",
+      endTime: data.endTime || "",
+      place: data.place || "",
+      coach: data.coach || "",
+      note: data.note || "",
+      repeatGroupId,
+    });
+    state.sessions.push(s);
+    firstId ||= s.id;
+  });
+  selectedSessionId = firstId || "";
+  if (data.date) {
+    weekStart = monday(new Date(`${data.date}T12:00:00`));
+    monthCursor = firstOfMonth(new Date(`${data.date}T12:00:00`));
+  }
+  save();
+  els.newSessionEl.close();
+  showView("calendar");
+  render();
+  if (selectedSessionId) openSessionDialog();
+}
+
+function makeSession(data) {
+  return {
+    id: uid("session"),
+    teamId: state.selectedTeamId,
+    seasonId: state.selectedSeasonId,
+    date: data.date,
+    type: data.type || "TJ",
+    startTime: data.startTime || "",
+    endTime: data.endTime || "",
+    place: data.place || "",
+    coach: data.coach || "",
+    note: data.note || "",
+    periodId: periodForDate(data.date)?.id || "",
+    mainGoalId: "",
+    extraGoalIds: [],
+    detailIds: [],
+    goalRatings: {},
+    detailRatings: {},
+    repeatGroupId: data.repeatGroupId || "",
+  };
+}
+
+function repeatDates(startDate, repeatUntil) {
+  if (!startDate) return [];
+  const dates = [];
+  const start = new Date(`${startDate}T12:00:00`);
+  const end = repeatUntil ? new Date(`${repeatUntil}T12:00:00`) : start;
+  let current = new Date(start);
+  while (current <= end) {
+    dates.push(dateKey(current));
+    current = addDays(current, 7);
+  }
+  return dates.length ? dates : [startDate];
+}
+
+function openSessionDialog() {
+  if (!selectedSession()) return;
+  if (!els.sessionEl.open) els.sessionEl.showModal();
+}
+
+function deleteSelectedSession() {
+  if (!selectedSessionId) return;
+  state.sessions = state.sessions.filter((s) => s.id !== selectedSessionId);
+  selectedSessionId = sessions()[0]?.id || "";
+  save();
+  if (els.sessionEl.open) els.sessionEl.close();
+  render();
+}
+
+function deleteSelectedSeries() {
+  const s = selectedSession();
+  if (!s) return;
+  const series = seriesSessions(s);
+  if (series.length <= 1) return;
+  const ok = window.confirm(`Smazat celé opakování? Bude odstraněno ${series.length} událostí.`);
+  if (!ok) return;
+  const ids = new Set(series.map((item) => item.id));
+  state.sessions = state.sessions.filter((item) => !ids.has(item.id));
+  selectedSessionId = "";
+  save();
+  if (els.sessionEl.open) els.sessionEl.close();
+  render();
+}
+
+function seriesSessions(source) {
+  if (!source) return [];
+  if (source.repeatGroupId) {
+    return state.sessions.filter((s) => s.repeatGroupId === source.repeatGroupId);
+  }
+  const weekdayKey = new Date(`${source.date}T12:00:00`).getDay();
+  return state.sessions.filter((s) =>
+    s.teamId === source.teamId &&
+    s.seasonId === source.seasonId &&
+    s.id !== source.id &&
+    new Date(`${s.date}T12:00:00`).getDay() === weekdayKey &&
+    s.type === source.type &&
+    (s.startTime || "") === (source.startTime || "") &&
+    (s.endTime || "") === (source.endTime || "") &&
+    (s.place || "") === (source.place || "") &&
+    (s.coach || "") === (source.coach || "") &&
+    (s.note || "") === (source.note || "")
+  ).concat(source).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function openEntityFromSession(type) {
+  if (els.sessionEl.open) els.sessionEl.close();
+  openDialog(type);
+}
+
+function openDialog(type, id = "") {
+  dialog = { type, id };
+  const item = id ? collection(type).find((x) => x.id === id) : {};
+  els.dialogTitle.textContent = id ? `Upravit ${entityName(type)}` : `Přidat ${entityName(type)}`;
+  els.dialogDelete.classList.toggle("hidden", !id);
+  els.dialogBody.innerHTML = fields(type, item);
+  els.dialogEl.showModal();
+}
+
+function saveDialog() {
+  const formData = new FormData(els.dialogForm);
+  const data = Object.fromEntries(formData.entries());
+  data.goalIds = formData.getAll("goalIds");
+  data.detailIds = formData.getAll("detailIds");
+  const item = normalize(dialog.type, data, dialog.id || uid(dialog.type));
+  const list = collection(dialog.type);
+  if (dialog.id) Object.assign(list.find((x) => x.id === dialog.id), item);
+  else list.push(item);
+  if (dialog.type === "team" && !state.selectedTeamId) state.selectedTeamId = item.id;
+  if (dialog.type === "season" && !state.selectedSeasonId) state.selectedSeasonId = item.id;
+  save();
+  els.dialogEl.close();
+  render();
+}
+
+function deleteDialogEntity() {
+  const list = collection(dialog.type);
+  const index = list.findIndex((x) => x.id === dialog.id);
+  if (index >= 0) list.splice(index, 1);
+  save();
+  els.dialogEl.close();
+  render();
+}
+
+function fields(type, item) {
+  if (type === "team") return input("name", "Název týmu", item.name);
+  if (type === "season") return input("name", "Název sezony", item.name) + input("start", "Začátek", item.start, "date") + input("end", "Konec", item.end, "date");
+  if (type === "period") return input("name", "Název období", item.name) + input("start", "Od", item.start, "date") + input("end", "Do", item.end, "date") + select("phase", "Fáze", ["ÚF na OP", "ÚF na ÚP", "OF na ÚP", "OF na OP"], item.phase) + multi("goalIds", "Cíle pro tuto fázi", state.goals, item.goalIds || [], "Tyhle cíle se pak budou u TJ v daném období nabízet jako doporučené.");
+  if (type === "goal") return input("name", "Název cíle", item.name) + multi("detailIds", "Doporučené detaily k tomuto cíli", state.details, item.detailIds || [], "Zaškrtni detaily, které se mají u tohoto cíle trenérovi nabízet. Detail může být zaškrtnutý u více cílů.");
+  if (type === "detail") return input("name", "Název detailu", item.name);
+  return "";
+}
+
+function normalize(type, data, id) {
+  if (type === "team") return { id, name: data.name || "Nový tým" };
+  if (type === "season") return { id, teamId: state.selectedTeamId, name: data.name || "Nová sezona", start: data.start || "", end: data.end || "" };
+  if (type === "period") return { id, teamId: state.selectedTeamId, seasonId: state.selectedSeasonId, name: data.name || data.phase || "Období", start: data.start || "", end: data.end || "", phase: data.phase || "", goalIds: split(data.goalIds) };
+  if (type === "goal") return { id, name: data.name || "Nový cíl", detailIds: split(data.detailIds) };
+  if (type === "detail") return { id, name: data.name || "Nový detail" };
+  return {};
+}
+
+function suggestedGoalsForSession(s) {
+  const period = periodById(s.periodId) || periodForDate(s.date);
+  return period ? state.goals.filter((g) => period.goalIds.includes(g.id)) : state.goals;
+}
+
+function suggestedDetailsForSession(s) {
+  const goalIds = [s.mainGoalId, ...s.extraGoalIds].filter(Boolean);
+  const ids = new Set(goalIds.flatMap((id) => goalById(id)?.detailIds || []));
+  return state.details.filter((d) => ids.has(d.id));
+}
+
+function progress() {
+  const goalIds = new Set(periods().flatMap((p) => p.goalIds));
+  const detailIds = new Set([...goalIds].flatMap((id) => goalById(id)?.detailIds || []));
+  return {
+    totalGoals: goalIds.size,
+    doneGoals: [...goalIds].filter((id) => completion("goal", id) >= 99.9).length,
+    totalDetails: detailIds.size,
+    doneDetails: [...detailIds].filter((id) => completion("detail", id) >= 99.9).length,
+    periodsWithTraining: periods().filter((p) => sessions().some((s) => s.date >= p.start && s.date <= p.end)).length,
+  };
+}
+
+function completion(kind, id) {
+  const key = kind === "goal" ? "goalRatings" : "detailRatings";
+  return sessions().reduce((current, s) => {
+    const rating = Number(s[key]?.[id] || 0);
+    return rating ? current + (100 - current) * (rating / 10) : current;
+  }, 0);
+}
+
+function hasRatings(s) {
+  return Object.values(s.goalRatings).some(Boolean) || Object.values(s.detailRatings).some(Boolean);
+}
+
+function input(name, label, value = "", type = "text") {
+  return `<label>${label}<input name="${name}" type="${type}" value="${esc(value || "")}" /></label>`;
+}
+function select(name, label, options, value = "") {
+  return `<label>${label}<select name="${name}">${options.map((o) => `<option ${o === value ? "selected" : ""}>${o}</option>`).join("")}</select></label>`;
+}
+function multi(name, label, items, values, hint = "") {
+  return `<fieldset class="check-list"><legend>${label}</legend>${hint ? `<p>${hint}</p>` : ""}
+    ${items.length ? items.map((i) => `<label><input type="checkbox" name="${name}" value="${i.id}" ${values.includes(i.id) ? "checked" : ""} /> <span>${esc(i.name)}</span></label>`).join("") : `<div class="muted">Zatím tu nic není. Nejdřív vytvoř položky v nastavení.</div>`}
+  </fieldset>`;
+}
+function chip(item, active, key) {
+  return `<button class="chip ${active ? "active" : ""}" data-${key}="${item.id}" type="button">${esc(item.name)}</button>`;
+}
+function option(item) { return `<option value="${item.id}">${esc(item.name)}</option>`; }
+function label(key) { return ({ name: "Název", start: "Od", end: "Do" })[key] || key; }
+function display(row, key) { return key === "start" || key === "end" ? fmt(row[key]) : row[key] || ""; }
+
+function showView(view) {
+  $$(".nav-btn").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+  $$(".view").forEach((v) => v.classList.toggle("active", v.id === `${view}View`));
+}
+function collection(type) { return ({ team: state.teams, season: state.seasons, period: state.periods, goal: state.goals, detail: state.details })[type]; }
+function entityFromKey(key) { return ({ teams: "team", seasons: "season", periods: "period", goals: "goal", details: "detail" })[key]; }
+function entityName(type) { return ({ team: "tým", season: "sezonu", period: "období", goal: "cíl", detail: "detail" })[type]; }
+function activeSeason() { return state.seasons.find((s) => s.id === state.selectedSeasonId); }
+function team() { return state.teams.find((t) => t.id === state.selectedTeamId); }
+function season() { return activeSeason(); }
+function seasons() { return state.seasons.filter((s) => s.teamId === state.selectedTeamId); }
+function periods() { return state.periods.filter((p) => p.teamId === state.selectedTeamId && p.seasonId === state.selectedSeasonId); }
+function sessions() { return state.sessions.filter((s) => s.teamId === state.selectedTeamId && s.seasonId === state.selectedSeasonId); }
+function visibleSessions() { return state.selectedPeriodId === "all" ? sessions() : sessions().filter((s) => s.periodId === state.selectedPeriodId || periodForDate(s.date)?.id === state.selectedPeriodId); }
+function selectedSession() { return sessionById(selectedSessionId); }
+function sessionById(id) { return state.sessions.find((s) => s.id === id); }
+function goalById(id) { return state.goals.find((g) => g.id === id); }
+function detailById(id) { return state.details.find((d) => d.id === id); }
+function periodById(id) { return state.periods.find((p) => p.id === id); }
+function periodForDate(date) { return periods().find((p) => date >= p.start && date <= p.end); }
+function ensureSelection() {
+  if (!state.selectedTeamId || !state.teams.some((t) => t.id === state.selectedTeamId)) state.selectedTeamId = state.teams[0]?.id || "";
+  if (!state.selectedSeasonId || !seasons().some((s) => s.id === state.selectedSeasonId)) state.selectedSeasonId = seasons()[0]?.id || "";
+  if (!state.selectedPeriodId) state.selectedPeriodId = "all";
+  if (selectedSessionId && !sessionById(selectedSessionId)) selectedSessionId = "";
+}
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || blank(); } catch { return blank(); }
+}
+function blank() {
+  return { teams: [], seasons: [], periods: [], goals: [], details: [], sessions: [], selectedTeamId: "", selectedSeasonId: "", selectedPeriodId: "all" };
+}
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (remoteEnabled && !applyingRemote) queueRemoteSave();
+}
+function setSyncStatus(text, mode = "") {
+  if (!els.syncStatus) return;
+  els.syncStatus.textContent = text;
+  els.syncStatus.className = `sync-status ${mode}`.trim();
+}
+async function startSync() {
+  try {
+    const store = await fetchRemoteState();
+    remoteEnabled = true;
+    remoteUpdatedAt = store.updatedAt || 0;
+    if (store.state) {
+      applyingRemote = true;
+      state = normalizeState(store.state);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      applyingRemote = false;
+      render();
+    }
+    setSyncStatus("Sdíleno online", "online");
+    window.setInterval(pollRemoteState, 2000);
+  } catch {
+    remoteEnabled = false;
+    setSyncStatus("Lokální režim");
+  }
+}
+async function fetchRemoteState() {
+  const response = await fetch(SYNC_URL, { cache: "no-store" });
+  if (!response.ok) throw new Error("Sync unavailable");
+  return response.json();
+}
+async function pollRemoteState() {
+  if (!remoteEnabled) return;
+  try {
+    const store = await fetchRemoteState();
+    if ((store.updatedAt || 0) > remoteUpdatedAt) {
+      remoteUpdatedAt = store.updatedAt || 0;
+      applyingRemote = true;
+      state = normalizeState(store.state);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      applyingRemote = false;
+      render();
+    }
+    setSyncStatus("Sdíleno online", "online");
+  } catch {
+    remoteEnabled = false;
+    setSyncStatus("Lokální režim");
+  }
+}
+function queueRemoteSave() {
+  window.clearTimeout(saveTimer);
+  setSyncStatus("Ukládám...", "saving");
+  saveTimer = window.setTimeout(pushRemoteState, 250);
+}
+async function pushRemoteState() {
+  if (!remoteEnabled) return;
+  try {
+    const response = await fetch(SYNC_URL, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ state }),
+    });
+    if (!response.ok) throw new Error("Save failed");
+    const store = await response.json();
+    remoteUpdatedAt = store.updatedAt || remoteUpdatedAt;
+    setSyncStatus("Sdíleno online", "online");
+  } catch {
+    remoteEnabled = false;
+    setSyncStatus("Lokální režim");
+  }
+}
+function normalizeState(nextState) {
+  return { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
+}
+function split(value) { return Array.isArray(value) ? value.filter(Boolean) : value ? String(value).split(",").filter(Boolean) : []; }
+function monday(date) { const d = new Date(date); const day = d.getDay() || 7; d.setDate(d.getDate() - day + 1); d.setHours(12,0,0,0); return d; }
+function addDays(date, days) { const d = new Date(date); d.setDate(d.getDate() + days); return d; }
+function dateKey(date) { return date.toISOString().slice(0, 10); }
+function firstOfMonth(date) { const d = new Date(date); d.setDate(1); d.setHours(12,0,0,0); return d; }
+function addMonths(date, months) { const d = new Date(date); d.setMonth(d.getMonth() + months, 1); d.setHours(12,0,0,0); return d; }
+function weekday(date) { return new Intl.DateTimeFormat("cs-CZ", { weekday: "short" }).format(date); }
+function long(date) { return new Intl.DateTimeFormat("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" }).format(date); }
+function fmt(value) { return value ? new Intl.DateTimeFormat("cs-CZ", { day: "numeric", month: "numeric" }).format(new Date(`${value}T12:00:00`)) : ""; }
+function esc(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;"); }
+
+async function registerServiceWorker() {
+  if ("serviceWorker" in navigator) {
+    try { await navigator.serviceWorker.register("./sw.js"); } catch {}
+  }
+}
