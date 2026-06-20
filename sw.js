@@ -1,4 +1,4 @@
-const CACHE_NAME = "makrocyklus-mvp-v21";
+const CACHE_NAME = "makrocyklus-mvp-v22";
 const ASSETS = ["./", "./index.html", "./styles.css", "./config.js", "./app.js", "./progress-fix.js", "./phase-model.js", "./team-scope.js", "./calendar-teams.js", "./sync-diagnostics.js", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", (event) => {

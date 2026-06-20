@@ -68,6 +68,17 @@ function renderHeaderTeamPicker() {
   }));
 }
 
+function applyTeamPickerMode(view = "calendar") {
+  document.body.dataset.activeView = view;
+}
+
+const calendarTeamsShowView = window.showView;
+showView = function showViewWithTeamPickerMode(view) {
+  calendarTeamsShowView(view);
+  applyTeamPickerMode(view);
+  if (view === "calendar") renderHeaderTeamPicker();
+};
+
 function openCalendarSession(id) {
   const session = sessionById(id);
   if (!session) return;
@@ -209,6 +220,7 @@ function saveNewSessionDialog() {
 
 try {
   state = migrateCalendarTeams(state);
+  applyTeamPickerMode("calendar");
   save();
   render();
 } catch {}
