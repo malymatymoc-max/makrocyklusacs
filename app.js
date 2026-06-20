@@ -1,6 +1,9 @@
 const STORAGE_KEY = "makrocyklus-mvp-v1";
 const TYPES = ["TJ", "Skupinový TJ", "Pohybový TJ", "Utkání", "Turnaj", "Jiná událost", "Volno"];
 const SYNC_URL = "/api/state";
+const SUPABASE_STATE_ID = "main";
+const SUPABASE_URL = window.MAKROCYCLE_SUPABASE_URL || "";
+const SUPABASE_KEY = window.MAKROCYCLE_SUPABASE_KEY || "";
 
 const uid = (prefix) => `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 const $ = (selector) => document.querySelector(selector);
@@ -15,6 +18,7 @@ let remoteUpdatedAt = 0;
 let remoteEnabled = false;
 let applyingRemote = false;
 let saveTimer = 0;
+let syncProvider = "local";
 
 const els = {
   team: $("#teamSelect"),
@@ -673,7 +677,7 @@ async function startSync() {
       applyingRemote = false;
       render();
     }
-    setSyncStatus("Sdíleno online", "online");
+    setSyncStatus(syncProvider === "supabase" ? "Sdíleno přes Supabase" : "Sdíleno online", "online");
     window.setInterval(pollRemoteState, 2000);
   } catch {
     remoteEnabled = false;
@@ -681,8 +685,16 @@ async function startSync() {
   }
 }
 async function fetchRemoteState() {
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    try {
+      return await fetchSupabaseState();
+    } catch {
+      syncProvider = "local";
+    }
+  }
   const response = await fetch(SYNC_URL, { cache: "no-store" });
   if (!response.ok) throw new Error("Sync unavailable");
+  syncProvider = "server";
   return response.json();
 }
 async function pollRemoteState() {
@@ -697,7 +709,7 @@ async function pollRemoteState() {
       applyingRemote = false;
       render();
     }
-    setSyncStatus("Sdíleno online", "online");
+    setSyncStatus(syncProvider === "supabase" ? "Sdíleno přes Supabase" : "Sdíleno online", "online");
   } catch {
     remoteEnabled = false;
     setSyncStatus("Lokální režim");
@@ -711,6 +723,12 @@ function queueRemoteSave() {
 async function pushRemoteState() {
   if (!remoteEnabled) return;
   try {
+    if (syncProvider === "supabase") {
+      const store = await saveSupabaseState();
+      remoteUpdatedAt = store.updatedAt || remoteUpdatedAt;
+      setSyncStatus("Sdíleno přes Supabase", "online");
+      return;
+    }
     const response = await fetch(SYNC_URL, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -724,6 +742,50 @@ async function pushRemoteState() {
     remoteEnabled = false;
     setSyncStatus("Lokální režim");
   }
+}
+async function fetchSupabaseState() {
+  syncProvider = "supabase";
+  const url = `${supabaseRestUrl()}?id=eq.${encodeURIComponent(SUPABASE_STATE_ID)}&select=id,updated_at,state`;
+  const response = await fetch(url, {
+    cache: "no-store",
+    headers: supabaseHeaders(),
+  });
+  if (!response.ok) throw new Error("Supabase sync unavailable");
+  const rows = await response.json();
+  if (rows[0]) return supabaseStore(rows[0]);
+  return createSupabaseState();
+}
+async function createSupabaseState() {
+  const response = await fetch(supabaseRestUrl(), {
+    method: "POST",
+    headers: { ...supabaseHeaders(), "Content-Type": "application/json", Prefer: "return=representation" },
+    body: JSON.stringify({ id: SUPABASE_STATE_ID, state: blank(), updated_at: new Date().toISOString() }),
+  });
+  if (!response.ok) throw new Error("Supabase state create failed");
+  const rows = await response.json();
+  return supabaseStore(rows[0]);
+}
+async function saveSupabaseState() {
+  const response = await fetch(`${supabaseRestUrl()}?id=eq.${encodeURIComponent(SUPABASE_STATE_ID)}`, {
+    method: "PATCH",
+    headers: { ...supabaseHeaders(), "Content-Type": "application/json", Prefer: "return=representation" },
+    body: JSON.stringify({ state, updated_at: new Date().toISOString() }),
+  });
+  if (!response.ok) throw new Error("Supabase save failed");
+  const rows = await response.json();
+  return supabaseStore(rows[0]);
+}
+function supabaseStore(row) {
+  return { updatedAt: Date.parse(row?.updated_at || "") || 0, state: row?.state || blank() };
+}
+function supabaseRestUrl() {
+  return `${SUPABASE_URL.replace(/\/$/, "")}/rest/v1/app_state`;
+}
+function supabaseHeaders() {
+  return {
+    apikey: SUPABASE_KEY,
+    Authorization: `Bearer ${SUPABASE_KEY}`,
+  };
 }
 function normalizeState(nextState) {
   return { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
