@@ -6,10 +6,10 @@ function migrateTeamScopedLibrary(nextState = state) {
   return next;
 }
 
-const phaseNormalizeState = normalizeState;
-function normalizeState(nextState) {
+const phaseNormalizeState = window.normalizeState;
+normalizeState = function normalizeTeamScopedState(nextState) {
   return migrateTeamScopedLibrary(phaseNormalizeState(nextState));
-}
+};
 
 function teamGoals() {
   return state.goals.filter((goal) => goal.teamId === state.selectedTeamId);
