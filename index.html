@@ -9,7 +9,7 @@
     <title>Makrocyklus</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=125" />
+    <link rel="stylesheet" href="./styles.css?v=126" />
     <style>
       .topbar { grid-template-columns: minmax(260px, 1.4fr) minmax(160px, .8fr) auto auto; }
       .team-picker-label { min-width: 0; }
@@ -19,6 +19,9 @@
       .team-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 7px; background: #f7faf7; color: var(--text); font-size: 12px; font-weight: 850; cursor: pointer; }
       .team-pill.active { border-color: rgba(0,122,61,.5); background: rgba(0,122,61,.1); color: var(--green); }
       .team-pill input { width: 14px; height: 14px; padding: 0; accent-color: var(--green); }
+      .sync-status { align-self: center; width: 12px; height: 12px; min-height: 12px; padding: 0; border: 0; border-radius: 999px; background: var(--red); color: transparent; font-size: 0; box-shadow: 0 0 0 4px rgba(204,61,61,.12); overflow: hidden; }
+      .sync-status.online { background: var(--green); box-shadow: 0 0 0 4px rgba(0,122,61,.14); }
+      .sync-status.saving { background: var(--amber); box-shadow: 0 0 0 4px rgba(210,138,22,.16); }
       @media (max-width: 760px) { .topbar { grid-template-columns: 1fr; } }
     </style>
   </head>
@@ -190,13 +193,13 @@
       </div>
     </dialog>
 
-    <script src="./config.js?v=125"></script>
-    <script src="./app.js?v=125"></script>
-    <script src="./progress-fix.js?v=125"></script>
-    <script src="./phase-model.js?v=125"></script>
-    <script src="./team-scope.js?v=125"></script>
-    <script src="./calendar-teams.js?v=125"></script>
-    <script src="./local-ui-state.js?v=125"></script>
-    <script src="./sync-diagnostics.js?v=125"></script>
+    <script src="./config.js?v=126"></script>
+    <script src="./app.js?v=126"></script>
+    <script src="./progress-fix.js?v=126"></script>
+    <script src="./phase-model.js?v=126"></script>
+    <script src="./team-scope.js?v=126"></script>
+    <script src="./calendar-teams.js?v=126"></script>
+    <script src="./local-ui-state.js?v=126"></script>
+    <script src="./sync-diagnostics.js?v=126"></script>
   </body>
 </html>

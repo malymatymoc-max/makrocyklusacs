@@ -663,6 +663,8 @@ function save() {
 function setSyncStatus(text, mode = "") {
   if (!els.syncStatus) return;
   els.syncStatus.textContent = text;
+  els.syncStatus.title = text;
+  els.syncStatus.setAttribute("aria-label", text);
   els.syncStatus.className = `sync-status ${mode}`.trim();
 }
 async function startSync() {
