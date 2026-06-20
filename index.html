@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#063f2f" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Makrocyklus" />
+    <title>Makrocyklus</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
+    <link rel="stylesheet" href="./styles.css?v=112" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-icon">M</span>
+          <span><strong>Makrocyklus</strong><small>Plánování tréninků</small></span>
+        </div>
+        <nav class="nav">
+          <button class="nav-btn active" data-view="calendar" type="button">Kalendář</button>
+          <button class="nav-btn" data-view="fulfillment" type="button">Plnění</button>
+          <button class="nav-btn" data-view="setup" type="button">Nastavení</button>
+        </nav>
+        <div class="quick-actions">
+          <strong>Rychlé akce</strong>
+          <button id="quickSession" type="button">+ Nová TJ</button>
+          <button id="quickPeriod" type="button">Nové období</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <label>Tým<select id="teamSelect"></select></label>
+          <label>Sezóna<select id="seasonSelect"></select></label>
+          <label>Období / fáze<select id="periodSelect"></select></label>
+          <span id="syncStatus" class="sync-status">Lokální režim</span>
+          <button id="newSession" class="primary" type="button">+ Nová TJ</button>
+        </header>
+
+        <section id="calendarView" class="view active">
+          <div class="calendar-board">
+            <section class="panel calendar-panel">
+              <div class="panel-header">
+                <button id="prevWeek" class="icon-btn" type="button">‹</button>
+                <div><h1 id="weekTitle"></h1><p id="contextLine"></p></div>
+                <button id="nextWeek" class="icon-btn" type="button">›</button>
+                <button id="todayBtn" class="secondary" type="button">Dnes</button>
+              </div>
+              <div id="calendarGrid" class="calendar-grid"></div>
+            </section>
+
+            <aside class="panel month-panel">
+              <div class="panel-header">
+                <button id="prevMonth" class="icon-btn" type="button">‹</button>
+                <div><h2 id="monthTitle"></h2><p>Měsíční přehled</p></div>
+                <button id="nextMonth" class="icon-btn" type="button">›</button>
+              </div>
+              <div class="month-weekdays">
+                <span>Po</span><span>Út</span><span>St</span><span>Čt</span><span>Pá</span><span>So</span><span>Ne</span>
+              </div>
+              <div id="monthGrid" class="month-grid"></div>
+            </aside>
+          </div>
+          <section id="progressStrip" class="progress-strip"></section>
+        </section>
+
+        <section id="fulfillmentView" class="view">
+          <section class="panel">
+            <div class="panel-header">
+              <div><h1>Plnění makrocyklu</h1><p>Cíle a detaily podle období nebo celé sezony.</p></div>
+              <select id="fulfillmentScope"></select>
+            </div>
+            <div id="fulfillmentGrid" class="circle-grid"></div>
+          </section>
+        </section>
+
+        <section id="setupView" class="view">
+          <div class="setup-grid">
+            <section class="panel setup-card" data-section="teams"></section>
+            <section class="panel setup-card" data-section="seasons"></section>
+            <section class="panel setup-card" data-section="periods"></section>
+            <section class="panel setup-card" data-section="goals"></section>
+            <section class="panel setup-card" data-section="details"></section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="dialog">
+      <form id="dialogForm">
+        <div class="dialog-head"><h2 id="dialogTitle"></h2><button id="dialogClose" type="button">×</button></div>
+        <div id="dialogBody" class="dialog-body"></div>
+        <div class="dialog-actions">
+          <button id="dialogDelete" class="danger" type="button">Smazat</button>
+          <span></span>
+          <button id="dialogCancel" class="secondary" type="button">Zrušit</button>
+          <button id="dialogSave" class="primary" type="button">Uložit</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="newSessionDialog">
+      <form id="newSessionForm">
+        <div class="dialog-head"><h2>Nová TJ / událost</h2><button id="newSessionClose" type="button">×</button></div>
+        <div class="dialog-body">
+          <div class="form-row">
+            <label>Datum<input name="date" type="date" required /></label>
+            <label>Typ<select name="type"></select></label>
+          </div>
+          <div class="form-row">
+            <label>Čas od<input name="startTime" type="time" /></label>
+            <label>Čas do<input name="endTime" type="time" /></label>
+          </div>
+          <div class="form-row">
+            <label>Místo<input name="place" /></label>
+            <label>Trenér<input name="coach" /></label>
+          </div>
+          <label>Poznámka<textarea name="note" rows="2"></textarea></label>
+          <label class="inline-check"><input name="repeat" type="checkbox" /> Opakovat každý stejný den v týdnu</label>
+          <label>Opakovat do<input name="repeatUntil" type="date" /></label>
+        </div>
+        <div class="dialog-actions">
+          <span></span>
+          <span></span>
+          <button id="newSessionCancel" class="secondary" type="button">Zrušit</button>
+          <button class="primary" type="submit">Vytvořit</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="sessionDialog">
+      <div class="dialog-head"><div><h2>TJ detail</h2><p id="editorHint">Vyber nebo vytvoř trénink.</p></div><button id="sessionClose" type="button">×</button></div>
+      <form id="sessionForm" class="editor-form">
+        <div class="form-row">
+          <label>Datum<input name="date" type="date" /></label>
+          <label>Typ<select name="type"></select></label>
+        </div>
+        <div class="form-row">
+          <label>Čas od<input name="startTime" type="time" /></label>
+          <label>Čas do<input name="endTime" type="time" /></label>
+        </div>
+        <div class="form-row">
+          <label>Místo<input name="place" /></label>
+          <label>Trenér<input name="coach" /></label>
+        </div>
+        <label>Poznámka<textarea name="note" rows="2"></textarea></label>
+
+        <div class="chooser-block">
+          <div class="chooser-title"><strong>Hlavní cíl TJ</strong><button data-create="goal" type="button">+ Cíl</button></div>
+          <select id="mainGoalSelect"></select>
+        </div>
+
+        <div class="chooser-block">
+          <div class="chooser-title"><strong>Další cíle</strong></div>
+          <div id="extraGoalChips" class="chips"></div>
+        </div>
+
+        <div class="chooser-block">
+          <div class="chooser-title"><strong>Detaily TJ</strong><button data-create="detail" type="button">+ Detail</button></div>
+          <div id="detailChips" class="chips"></div>
+        </div>
+
+        <div class="rating-block">
+          <h3>Hodnocení po TJ</h3>
+          <div id="ratings"></div>
+        </div>
+      </form>
+      <div class="dialog-actions">
+        <button id="deleteSession" class="danger" type="button">Smazat tuto TJ</button>
+        <button id="deleteSeries" class="danger subtle-danger" type="button">Smazat celé opakování</button>
+        <span></span>
+        <button id="sessionDone" class="primary" type="button">Hotovo</button>
+      </div>
+    </dialog>
+
+    <script src="./app.js?v=112"></script>
+  </body>
+</html>
