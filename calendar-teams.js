@@ -5,10 +5,10 @@ function migrateCalendarTeams(nextState = state) {
   return next;
 }
 
-const teamScopeNormalizeState = normalizeState;
-function normalizeState(nextState) {
+const teamScopeNormalizeState = window.normalizeState;
+normalizeState = function normalizeCalendarTeamState(nextState) {
   return migrateCalendarTeams(teamScopeNormalizeState(nextState));
-}
+};
 
 function visibleTeamIds() {
   const ids = Array.isArray(state.calendarTeamIds) ? state.calendarTeamIds : [];
@@ -85,15 +85,15 @@ function renderCalendar() {
   $$("[data-session]").forEach((btn) => btn.addEventListener("click", () => openCalendarSession(btn.dataset.session)));
 }
 
-const calendarTeamsRenderSelectors = renderSelectors;
-function renderSelectors() {
+const calendarTeamsRenderSelectors = window.renderSelectors;
+renderSelectors = function renderCalendarTeamSelectors() {
   calendarTeamsRenderSelectors();
   state = migrateCalendarTeams(state);
   if (!visibleTeamIds().includes(state.selectedTeamId) && state.selectedTeamId) {
     state.calendarTeamIds = [...visibleTeamIds(), state.selectedTeamId];
   }
   renderCalendarTeamFilter();
-}
+};
 
 try {
   state = migrateCalendarTeams(state);
