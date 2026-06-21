@@ -1,5 +1,5 @@
-const CACHE_NAME = "makrocyklus-mvp-v25";
-const ASSETS = ["./", "./index.html", "./styles.css", "./config.js", "./app.js", "./progress-fix.js", "./phase-model.js", "./team-scope.js", "./calendar-teams.js", "./training-requirements.js", "./local-ui-state.js", "./sync-diagnostics.js", "./manifest.webmanifest", "./icon.svg"];
+const CACHE_NAME = "makrocyklus-mvp-v26";
+const ASSETS = ["./", "./index.html", "./styles.css", "./config.js", "./app.js", "./progress-fix.js", "./phase-model.js", "./team-scope.js", "./calendar-teams.js", "./training-requirements.js", "./team-colors.js", "./local-ui-state.js", "./sync-diagnostics.js", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
