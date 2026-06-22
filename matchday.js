@@ -273,18 +273,12 @@
     });
     host.querySelectorAll("[data-slot]").forEach((button) => {
       button.addEventListener("click", () => {
-        const slotIndex = Number(button.dataset.slot);
-        selectedSlotIndex = selectedSlotIndex === slotIndex ? -1 : slotIndex;
-        selectedBenchIndex = -1;
-        renderMatchday();
+        handleRosterSlotClick(matchday, "field", Number(button.dataset.slot));
       });
     });
     host.querySelectorAll("[data-bench-slot]").forEach((button) => {
       button.addEventListener("click", () => {
-        const benchIndex = Number(button.dataset.benchSlot);
-        selectedBenchIndex = selectedBenchIndex === benchIndex ? -1 : benchIndex;
-        selectedSlotIndex = -1;
-        renderMatchday();
+        handleRosterSlotClick(matchday, "bench", Number(button.dataset.benchSlot));
       });
     });
     host.querySelectorAll("[data-pick-player]").forEach((button) => {
@@ -336,6 +330,54 @@
         renderMatchday();
       });
     });
+  }
+
+  function handleRosterSlotClick(matchday, targetArea, targetIndex) {
+    const current = selectedRosterSlot();
+    if (current && current.area === targetArea && current.index === targetIndex) {
+      clearRosterSelection();
+      renderMatchday();
+      return;
+    }
+
+    if (current) {
+      const currentPlayerId = rosterSlotValue(matchday, current);
+      if (currentPlayerId) {
+        const target = { area: targetArea, index: targetIndex };
+        const targetPlayerId = rosterSlotValue(matchday, target);
+        setRosterSlotValue(matchday, current, targetPlayerId);
+        setRosterSlotValue(matchday, target, currentPlayerId);
+        matchday.benchPlayerIds = trimTrailingEmpty(matchday.benchPlayerIds);
+        clearRosterSelection();
+        save();
+        renderMatchday();
+        return;
+      }
+    }
+
+    selectedSlotIndex = targetArea === "field" ? targetIndex : -1;
+    selectedBenchIndex = targetArea === "bench" ? targetIndex : -1;
+    renderMatchday();
+  }
+
+  function selectedRosterSlot() {
+    if (selectedSlotIndex >= 0) return { area: "field", index: selectedSlotIndex };
+    if (selectedBenchIndex >= 0) return { area: "bench", index: selectedBenchIndex };
+    return null;
+  }
+
+  function rosterSlotValue(matchday, slot) {
+    return slot.area === "field" ? matchday.fieldPlayerIds[slot.index] || "" : matchday.benchPlayerIds[slot.index] || "";
+  }
+
+  function setRosterSlotValue(matchday, slot, playerId) {
+    if (slot.area === "field") matchday.fieldPlayerIds[slot.index] = playerId || "";
+    else matchday.benchPlayerIds[slot.index] = playerId || "";
+  }
+
+  function clearRosterSelection() {
+    selectedSlotIndex = -1;
+    selectedBenchIndex = -1;
   }
 
   function liveMatchScreen(session, matchday, teamItem, players, positions) {
