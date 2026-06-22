@@ -273,14 +273,16 @@
     });
     host.querySelectorAll("[data-slot]").forEach((button) => {
       button.addEventListener("click", () => {
-        selectedSlotIndex = Number(button.dataset.slot);
+        const slotIndex = Number(button.dataset.slot);
+        selectedSlotIndex = selectedSlotIndex === slotIndex ? -1 : slotIndex;
         selectedBenchIndex = -1;
         renderMatchday();
       });
     });
     host.querySelectorAll("[data-bench-slot]").forEach((button) => {
       button.addEventListener("click", () => {
-        selectedBenchIndex = Number(button.dataset.benchSlot);
+        const benchIndex = Number(button.dataset.benchSlot);
+        selectedBenchIndex = selectedBenchIndex === benchIndex ? -1 : benchIndex;
         selectedSlotIndex = -1;
         renderMatchday();
       });
