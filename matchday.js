@@ -154,7 +154,6 @@
             <button class="secondary" data-open-calendar-session="${session.id}" type="button">Otevřít v kalendáři</button>
           </div>
         </div>
-        ${liveDashboard(matchday, teamItem, players)}
         <div class="matchday-grid">
           <div class="match-settings">
             ${matchSettings(matchday)}
@@ -337,83 +336,48 @@
     });
   }
 
-  function liveDashboard(matchday, teamItem, players) {
-    const score = scoreLine(matchday);
-    const roster = selectedRoster(matchday, players);
-    return `<section class="live-panel">
-      <div class="scoreboard">
-        <div><small>${esc(teamItem?.name || "My")}</small><strong>${score.own}</strong></div>
-        <span>:</span>
-        <div><small>${esc(matchday.opponent || "Soupeř")}</small><strong>${score.opponent}</strong></div>
-      </div>
-      <div class="timer-box">
-        <span>Část ${matchday.currentPart}/${matchday.partsCount}</span>
-        <strong>${formatClock(currentRemaining(matchday))}</strong>
-        <div class="timer-actions">
-          <button class="secondary" data-timer="${matchday.timerRunning ? "pause" : "start"}" type="button">${matchday.timerRunning ? "Pauza" : "Start"}</button>
-          <button class="secondary" data-timer="reset" type="button">Reset</button>
-          <button class="secondary" data-timer="next" type="button">Další část</button>
-        </div>
-      </div>
-      <div class="shot-box">
-        <span>Střely</span>
-        <strong>${matchday.shots}</strong>
-        <div class="timer-actions">
-          <button class="secondary" data-shot="-1" type="button">-</button>
-          <button class="primary" data-shot="1" type="button">+ střela</button>
-        </div>
-      </div>
-      <div class="goal-box">
-        <strong>Gól ${esc(teamItem?.name || "náš tým")}</strong>
-        <div class="goal-buttons">
-          <button class="mini" data-open-goal-picker type="button" ${roster.length ? "" : "disabled"}>Vybrat střelkyni</button>
-        </div>
-        <button class="danger subtle-danger" data-goal-side="opponent" type="button">Gól ${esc(matchday.opponent || "soupeř")}</button>
-      </div>
-      <div class="goal-log">
-        <strong>Průběh utkání</strong>
-        ${matchday.goals.length ? [...matchday.goals].reverse().map((goal) => goalLogItem(goal, matchday, players, teamItem)).join("") : `<div class="muted">Zatím bez gólů.</div>`}
-      </div>
-    </section>`;
-  }
-
   function liveMatchScreen(session, matchday, teamItem, players, positions) {
     const score = scoreLine(matchday);
     const roster = selectedRoster(matchday, players);
     const fieldCount = matchday.fieldPlayerIds.filter(Boolean).length;
     const benchCount = matchday.benchPlayerIds.filter(Boolean).length;
     return `<div class="match-live-screen">
-      <div class="match-live-top">
+      <div class="match-live-toolbar">
         <button class="secondary live-back" data-live-mode="close" type="button">← Příprava</button>
-        <div class="live-score-card">
-          <small>${esc(teamItem?.name || "My")}</small>
-          <strong>${score.own}</strong>
+        <div class="live-match-title">
+          <h1>${esc(teamItem?.name || "Tým")} vs ${esc(matchday.opponent || "Soupeř")}</h1>
+          <p>${fmtFullDate(session.date)}${session.startTime ? ` · ${esc(session.startTime)}` : ""}${session.place ? ` · ${esc(session.place)}` : ""}</p>
         </div>
-        <span class="live-score-separator">:</span>
-        <div class="live-score-card">
-          <small>${esc(matchday.opponent || "Soupeř")}</small>
-          <strong>${score.opponent}</strong>
-        </div>
-        <button class="primary live-goal-button" data-open-goal-picker type="button" ${roster.length ? "" : "disabled"}>Gól ${esc(teamItem?.name || "tým")}</button>
-        <button class="secondary live-goal-button" data-goal-side="opponent" type="button">Gól ${esc(matchday.opponent || "soupeř")}</button>
       </div>
 
-      <div class="match-live-clock">
-        <div>
+      <div class="match-live-controls">
+        <section class="live-control-card live-score-card">
+          <div><small>${esc(teamItem?.name || "My")}</small><strong>${score.own}</strong></div>
+          <span>:</span>
+          <div><small>${esc(matchday.opponent || "Soupeř")}</small><strong>${score.opponent}</strong></div>
+        </section>
+        <section class="live-control-card live-clock-card">
           <span>Část ${matchday.currentPart}/${matchday.partsCount}</span>
           <strong>${formatClock(currentRemaining(matchday))}</strong>
-        </div>
-        <div class="live-clock-actions">
-          <button class="primary" data-timer="${matchday.timerRunning ? "pause" : "start"}" type="button">${matchday.timerRunning ? "Pauza" : "Start"}</button>
-          <button class="secondary" data-timer="reset" type="button">Reset části</button>
-          <button class="secondary" data-timer="next" type="button">Další část</button>
-        </div>
-        <div class="live-shot-control">
-          <button class="secondary" data-shot="-1" type="button">−</button>
+          <div class="live-clock-actions">
+            <button class="primary" data-timer="${matchday.timerRunning ? "pause" : "start"}" type="button">${matchday.timerRunning ? "Pauza" : "Start"}</button>
+            <button class="secondary" data-timer="reset" type="button">Reset</button>
+            <button class="secondary" data-timer="next" type="button">Další část</button>
+          </div>
+        </section>
+        <section class="live-control-card live-shots-card">
+          <span>Střely</span>
           <strong>${matchday.shots}</strong>
-          <span>střel</span>
-          <button class="primary" data-shot="1" type="button">+</button>
-        </div>
+          <div class="live-shot-control">
+            <button class="secondary" data-shot="-1" type="button">−</button>
+            <button class="primary" data-shot="1" type="button">+ střela</button>
+          </div>
+        </section>
+        <section class="live-control-card live-goals-card">
+          <span>Góly</span>
+          <button class="primary live-goal-button" data-open-goal-picker type="button" ${roster.length ? "" : "disabled"}>Gól ${esc(teamItem?.name || "tým")}</button>
+          <button class="danger subtle-danger live-goal-button" data-goal-side="opponent" type="button">Gól ${esc(matchday.opponent || "soupeř")}</button>
+        </section>
       </div>
 
       <div class="match-live-body">
