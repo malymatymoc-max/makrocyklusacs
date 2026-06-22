@@ -127,6 +127,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); box-shad
 .team-roster-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line); background: #fbfdfb; }
 .team-roster-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .team-roster-dot { width: 9px; height: 9px; border-radius: 999px; background: var(--green); flex: none; }
+.team-roster-title > span { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .team-roster-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .team-roster-title span { color: var(--muted); font-size: 12px; }
 .team-roster-toggle { min-height: 30px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--text); padding: 0 9px; font-size: 12px; font-weight: 800; }
