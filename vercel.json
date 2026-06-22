@@ -19,6 +19,7 @@
     { "src": "training-requirements.js", "use": "@vercel/static" },
     { "src": "team-colors.js", "use": "@vercel/static" },
     { "src": "players.js", "use": "@vercel/static" },
+    { "src": "matchday.js", "use": "@vercel/static" },
     { "src": "local-ui-state.js", "use": "@vercel/static" },
     { "src": "sync-diagnostics.js", "use": "@vercel/static" },
     { "src": "styles.css", "use": "@vercel/static" },

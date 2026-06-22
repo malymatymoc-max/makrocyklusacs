@@ -9,7 +9,7 @@
     <title>Makrocyklus</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=132" />
+    <link rel="stylesheet" href="./styles.css?v=133" />
     <style>
       .topbar { grid-template-columns: minmax(260px, 1.4fr) minmax(160px, .8fr) auto auto; }
       .team-picker-label { min-width: 0; }
@@ -18,6 +18,7 @@
       body[data-active-view="calendar"] .legacy-team-select { display: none; }
       body[data-active-view="calendar"] .team-multi { display: flex; }
       body[data-active-view="teams"] .topbar { display: none; }
+      body[data-active-view="matchday"] .topbar { display: none; }
       .team-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 7px; background: #f7faf7; color: var(--text); font-size: 12px; font-weight: 850; cursor: pointer; }
       .team-pill.active { border-color: rgba(0,122,61,.5); background: rgba(0,122,61,.1); color: var(--green); }
       .team-pill input { width: 14px; height: 14px; padding: 0; accent-color: var(--green); }
@@ -45,6 +46,7 @@
         <nav class="nav">
           <button class="nav-btn active" data-view="calendar" type="button">Kalendář</button>
           <button class="nav-btn" data-view="teams" type="button">Týmy</button>
+          <button class="nav-btn" data-view="matchday" type="button">Matchday</button>
           <button class="nav-btn" data-view="fulfillment" type="button">Plnění</button>
           <button class="nav-btn" data-view="setup" type="button">Nastavení</button>
         </nav>
@@ -108,6 +110,18 @@
             </div>
             <div id="playersGrid" class="players-grid"></div>
           </section>
+        </section>
+
+        <section id="matchdayView" class="view">
+          <div class="matchday-layout">
+            <section class="panel">
+              <div class="panel-header">
+                <div><h1>Matchday</h1><p>Utkání z kalendáře napříč kategoriemi.</p></div>
+              </div>
+              <div id="matchdayList" class="matchday-list"></div>
+            </section>
+            <section id="matchdayDetail" class="panel matchday-detail"></section>
+          </div>
         </section>
 
         <section id="setupView" class="view">
@@ -213,16 +227,17 @@
       </div>
     </dialog>
 
-    <script src="./config.js?v=132"></script>
-    <script src="./app.js?v=132"></script>
-    <script src="./progress-fix.js?v=132"></script>
-    <script src="./phase-model.js?v=132"></script>
-    <script src="./team-scope.js?v=132"></script>
-    <script src="./calendar-teams.js?v=132"></script>
-    <script src="./training-requirements.js?v=132"></script>
-    <script src="./team-colors.js?v=132"></script>
-    <script src="./players.js?v=132"></script>
-    <script src="./local-ui-state.js?v=132"></script>
-    <script src="./sync-diagnostics.js?v=132"></script>
+    <script src="./config.js?v=133"></script>
+    <script src="./app.js?v=133"></script>
+    <script src="./progress-fix.js?v=133"></script>
+    <script src="./phase-model.js?v=133"></script>
+    <script src="./team-scope.js?v=133"></script>
+    <script src="./calendar-teams.js?v=133"></script>
+    <script src="./training-requirements.js?v=133"></script>
+    <script src="./team-colors.js?v=133"></script>
+    <script src="./players.js?v=133"></script>
+    <script src="./matchday.js?v=133"></script>
+    <script src="./local-ui-state.js?v=133"></script>
+    <script src="./sync-diagnostics.js?v=133"></script>
   </body>
 </html>

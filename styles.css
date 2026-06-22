@@ -141,6 +141,34 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); box-shad
 .player-photo-field { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: center; }
 .player-photo-field input[type="file"] { padding: 7px; height: auto; }
 
+.matchday-layout { display: grid; grid-template-columns: minmax(280px, .44fr) minmax(520px, 1fr); gap: 16px; align-items: start; }
+.matchday-list { display: grid; gap: 8px; padding: 12px; }
+.match-card { display: grid; gap: 5px; width: 100%; padding: 12px; border: 1px solid var(--line); border-left: 4px solid var(--team-color, var(--amber)); border-radius: 8px; background: #fff; text-align: left; }
+.match-card.active, .match-card:hover { border-color: rgba(0,122,61,.28); border-left-color: var(--team-color, var(--green)); background: #fbfdfb; }
+.match-card strong { font-size: 14px; }
+.match-card span { color: var(--muted); font-size: 12px; }
+.matchday-detail { min-height: 420px; }
+.matchday-empty { padding: 16px; }
+.matchday-dashboard { display: grid; gap: 14px; padding: 14px; }
+.matchday-header { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+.matchday-header h2 { font-size: 20px; }
+.matchday-grid { display: grid; grid-template-columns: minmax(280px, .75fr) minmax(360px, 1fr); gap: 14px; align-items: start; }
+.match-settings { display: grid; gap: 10px; }
+.match-settings .form-row { grid-template-columns: 1fr 1fr; }
+.pitch-card { display: grid; gap: 12px; }
+.pitch { position: relative; min-height: 430px; border-radius: 8px; border: 1px solid rgba(255,255,255,.42); background: linear-gradient(180deg, #2f9a5b, #14713f); overflow: hidden; box-shadow: inset 0 0 0 2px rgba(255,255,255,.18); }
+.pitch::before { content: ""; position: absolute; inset: 18px; border: 2px solid rgba(255,255,255,.48); border-radius: 8px; }
+.pitch::after { content: ""; position: absolute; left: 50%; top: 50%; width: 90px; height: 90px; border: 2px solid rgba(255,255,255,.42); border-radius: 999px; transform: translate(-50%, -50%); }
+.pitch-slot { position: absolute; left: var(--x); top: var(--y); transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 5px; min-width: 76px; border: 0; background: transparent; color: #fff; text-align: center; }
+.pitch-player { width: 58px; height: 58px; border-radius: 999px; display: grid; place-items: center; overflow: hidden; border: 2px solid rgba(255,255,255,.84); background: rgba(255,255,255,.18); color: #fff; font-size: 13px; font-weight: 900; box-shadow: 0 8px 18px rgba(0,0,0,.16); }
+.pitch-player img { width: 100%; height: 100%; object-fit: cover; }
+.pitch-slot small { max-width: 78px; color: #fff; font-size: 11px; line-height: 1.1; text-shadow: 0 1px 2px rgba(0,0,0,.24); }
+.bench-panel { display: grid; gap: 8px; }
+.bench-list, .player-pick-list { display: flex; flex-wrap: wrap; gap: 7px; }
+.bench-player, .player-pick { border: 1px solid var(--line); border-radius: 7px; background: #fff; min-height: 32px; padding: 0 9px; font-size: 12px; font-weight: 800; }
+.bench-player.active, .player-pick.active { border-color: rgba(0,122,61,.32); background: var(--soft); color: var(--green-dark); }
+.player-pick-dialog { width: min(520px, calc(100vw - 24px)); }
+
 .setup-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
 .setup-card table { width: 100%; border-collapse: collapse; }
 .setup-card th, .setup-card td { padding: 10px 12px; border-top: 1px solid var(--line); text-align: left; font-size: 13px; }
@@ -165,14 +193,14 @@ dialog::backdrop { background: rgba(6,63,47,.34); }
   .app { grid-template-columns: 74px minmax(0,1fr); }
   .brand span:not(.brand-icon), .quick-actions { display: none; }
   .nav-btn { padding: 0 8px; text-align: center; font-size: 11px; }
-  .calendar-board, .calendar-layout, .setup-grid { grid-template-columns: 1fr; }
+  .calendar-board, .calendar-layout, .setup-grid, .matchday-layout, .matchday-grid { grid-template-columns: 1fr; }
   .editor-panel { max-height: none; }
 }
 @media (max-width: 760px) {
   .app { display: block; }
   .sidebar { position: fixed; inset: auto 0 0 0; z-index: 20; height: 66px; flex-direction: row; padding: 8px; }
   .brand { display: none; }
-  .nav { grid-template-columns: repeat(4,1fr); width: 100%; }
+.nav { grid-template-columns: repeat(5,1fr); width: 100%; }
   .main { padding-bottom: 72px; }
   .topbar { position: static; grid-template-columns: 1fr; }
   .calendar-grid, .form-row, .progress-strip { grid-template-columns: 1fr; }
@@ -182,4 +210,6 @@ dialog::backdrop { background: rgba(6,63,47,.34); }
   .event { width: auto; margin: 8px; padding: 8px 10px; }
   .empty-day { padding: 11px 12px; }
   .rating-row { grid-template-columns: 1fr repeat(5, 26px); }
+  .pitch { min-height: 360px; }
+  .matchday-header { display: grid; }
 }
