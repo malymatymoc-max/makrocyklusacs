@@ -9,10 +9,11 @@
     <title>Makrocyklus</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=128" />
+    <link rel="stylesheet" href="./styles.css?v=129" />
     <style>
       .topbar { grid-template-columns: minmax(260px, 1.4fr) minmax(160px, .8fr) auto auto; }
       .team-picker-label { min-width: 0; }
+      .legacy-team-select { display: block; }
       .team-multi { display: none; flex-wrap: wrap; gap: 7px; min-height: 38px; align-items: center; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
       body[data-active-view="calendar"] .legacy-team-select { display: none; }
       body[data-active-view="calendar"] .team-multi { display: flex; }
@@ -42,6 +43,7 @@
         </div>
         <nav class="nav">
           <button class="nav-btn active" data-view="calendar" type="button">Kalendář</button>
+          <button class="nav-btn" data-view="teams" type="button">Týmy</button>
           <button class="nav-btn" data-view="fulfillment" type="button">Plnění</button>
           <button class="nav-btn" data-view="setup" type="button">Nastavení</button>
         </nav>
@@ -95,6 +97,16 @@
               <select id="fulfillmentScope"></select>
             </div>
             <div id="fulfillmentGrid" class="circle-grid"></div>
+          </section>
+        </section>
+
+        <section id="teamsView" class="view">
+          <section class="panel">
+            <div class="panel-header">
+              <div><h1 id="teamRosterTitle">Tým</h1><p id="teamRosterMeta"></p></div>
+              <button id="addPlayer" class="primary" type="button">+ Hráčka</button>
+            </div>
+            <div id="playersGrid" class="players-grid"></div>
           </section>
         </section>
 
@@ -201,15 +213,16 @@
       </div>
     </dialog>
 
-    <script src="./config.js?v=128"></script>
-    <script src="./app.js?v=128"></script>
-    <script src="./progress-fix.js?v=128"></script>
-    <script src="./phase-model.js?v=128"></script>
-    <script src="./team-scope.js?v=128"></script>
-    <script src="./calendar-teams.js?v=128"></script>
-    <script src="./training-requirements.js?v=128"></script>
-    <script src="./team-colors.js?v=128"></script>
-    <script src="./local-ui-state.js?v=128"></script>
-    <script src="./sync-diagnostics.js?v=128"></script>
+    <script src="./config.js?v=129"></script>
+    <script src="./app.js?v=129"></script>
+    <script src="./progress-fix.js?v=129"></script>
+    <script src="./phase-model.js?v=129"></script>
+    <script src="./team-scope.js?v=129"></script>
+    <script src="./calendar-teams.js?v=129"></script>
+    <script src="./training-requirements.js?v=129"></script>
+    <script src="./team-colors.js?v=129"></script>
+    <script src="./players.js?v=129"></script>
+    <script src="./local-ui-state.js?v=129"></script>
+    <script src="./sync-diagnostics.js?v=129"></script>
   </body>
 </html>

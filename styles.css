@@ -34,12 +34,18 @@ p, small { color: var(--muted); }
 .quick-actions button { padding: 0; min-height: 34px; }
 
 .main { min-width: 0; }
-.topbar { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: repeat(3, minmax(160px, 1fr)) auto auto; gap: 12px; align-items: end; padding: 16px 18px; border-bottom: 1px solid var(--line); background: rgba(244,246,244,.96); backdrop-filter: blur(12px); }
+.topbar { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: minmax(260px, 1.4fr) minmax(160px, .8fr) auto auto; gap: 12px; align-items: end; padding: 16px 18px; border-bottom: 1px solid var(--line); background: rgba(244,246,244,.96); backdrop-filter: blur(12px); }
 label { display: grid; gap: 6px; color: #35463f; font-size: 12px; font-weight: 800; }
 input, select, textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--text); outline: 0; }
 input, select { height: 38px; padding: 0 10px; }
 textarea { padding: 10px; resize: vertical; }
 input:focus, select:focus, textarea:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(0,122,61,.12); }
+.legacy-team-select { display: none; }
+.team-picker-label { min-width: 0; }
+.team-multi { display: flex; flex-wrap: wrap; gap: 7px; min-height: 38px; align-items: center; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.team-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 7px; background: #f7faf7; color: var(--text); font-size: 12px; font-weight: 850; cursor: pointer; }
+.team-pill.active { border-color: rgba(0,122,61,.5); background: rgba(0,122,61,.1); color: var(--green); }
+.team-pill input { width: 14px; height: 14px; padding: 0; accent-color: var(--green); }
 .primary, .secondary, .danger, .icon-btn { min-height: 38px; border-radius: 8px; border: 1px solid var(--line); padding: 0 14px; font-weight: 900; background: #fff; color: var(--text); }
 .primary { background: var(--green); border-color: var(--green); color: white; box-shadow: 0 8px 22px rgba(0,122,61,.2); }
 .danger { color: var(--red); background: #fff8f8; border-color: rgba(204,61,61,.25); }
@@ -116,6 +122,16 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); box-shad
 .circle { --pct: 0; width: 92px; height: 92px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--color) calc(var(--pct) * 1%), #e7ece8 0); }
 .circle span { width: 68px; height: 68px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-weight: 900; }
 
+.players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; padding: 16px; }
+.player-card { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; align-items: center; width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; text-align: left; }
+.player-card:hover { border-color: rgba(0,122,61,.28); background: #fbfdfb; }
+.player-photo, .player-photo-preview { width: 56px; height: 56px; border-radius: 999px; object-fit: cover; background: var(--soft); border: 1px solid rgba(0,122,61,.14); display: grid; place-items: center; color: var(--green-dark); font-weight: 900; overflow: hidden; }
+.player-photo img, .player-photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+.player-card strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.player-card span { color: var(--muted); font-size: 12px; }
+.player-photo-field { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: center; }
+.player-photo-field input[type="file"] { padding: 7px; height: auto; }
+
 .setup-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
 .setup-card table { width: 100%; border-collapse: collapse; }
 .setup-card th, .setup-card td { padding: 10px 12px; border-top: 1px solid var(--line); text-align: left; font-size: 13px; }
@@ -147,7 +163,7 @@ dialog::backdrop { background: rgba(6,63,47,.34); }
   .app { display: block; }
   .sidebar { position: fixed; inset: auto 0 0 0; z-index: 20; height: 66px; flex-direction: row; padding: 8px; }
   .brand { display: none; }
-  .nav { grid-template-columns: repeat(3,1fr); width: 100%; }
+  .nav { grid-template-columns: repeat(4,1fr); width: 100%; }
   .main { padding-bottom: 72px; }
   .topbar { position: static; grid-template-columns: 1fr; }
   .calendar-grid, .form-row, .progress-strip { grid-template-columns: 1fr; }
