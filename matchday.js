@@ -2,6 +2,7 @@
   const MATCH_FORMATS = ["2+0", "3+0", "3+1", "4+1", "5+1"];
   let selectedMatchSessionId = "";
   let selectedSlotIndex = -1;
+  let selectedBenchIndex = -1;
 
   function migrateMatchdays(nextState = state) {
     const next = { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
@@ -76,6 +77,7 @@
       button.addEventListener("click", () => {
         selectedMatchSessionId = button.dataset.matchSession;
         selectedSlotIndex = -1;
+        selectedBenchIndex = -1;
         matchdayForSession(sessionById(selectedMatchSessionId));
         renderMatchday();
       });
@@ -108,6 +110,7 @@
     if (matchday.fieldPlayerIds.length !== positions.length) {
       matchday.fieldPlayerIds = normalizeMatchday(matchday).fieldPlayerIds;
       selectedSlotIndex = -1;
+      selectedBenchIndex = -1;
     }
 
     host.innerHTML = `
@@ -161,28 +164,38 @@
   }
 
   function benchPanel(matchday, players) {
-    const fieldIds = new Set(matchday.fieldPlayerIds.filter(Boolean));
+    const slotCount = Math.max(8, matchday.benchPlayerIds.length + 1);
     return `<section class="chooser-block bench-panel">
       <div class="chooser-title"><strong>Střídačka</strong></div>
       <div class="bench-list">
-        ${players.length ? players.map((player) => {
-          const disabled = fieldIds.has(player.id);
-          const active = matchday.benchPlayerIds.includes(player.id);
-          return `<button class="bench-player ${active ? "active" : ""}" data-bench-player="${player.id}" ${disabled ? "disabled" : ""} type="button">${esc(displayPlayerName(player))}</button>`;
-        }).join("") : `<div class="muted">Nejdřív přidej hráčky v záložce Týmy.</div>`}
+        ${players.length ? Array.from({ length: slotCount }, (_, index) => benchSlot(matchday, players, index)).join("") : `<div class="muted">Nejdřív přidej hráčky v záložce Týmy.</div>`}
       </div>
     </section>`;
   }
 
+  function benchSlot(matchday, players, index) {
+    const player = players.find((item) => item.id === matchday.benchPlayerIds[index]);
+    return `<button class="bench-slot ${selectedBenchIndex === index ? "active" : ""}" data-bench-slot="${index}" type="button">
+      <span class="bench-circle">${player ? playerPhoto(player) : "+"}</span>
+      <small>${player ? esc(displayPlayerName(player)) : "volné"}</small>
+    </button>`;
+  }
+
   function playerPicker(matchday, players) {
-    if (selectedSlotIndex < 0) return `<div class="muted">Klikni na kolečko na hřišti a vyber hráčku.</div>`;
-    const usedIds = new Set(matchday.fieldPlayerIds.filter((id, index) => id && index !== selectedSlotIndex));
+    const isFieldPick = selectedSlotIndex >= 0;
+    const isBenchPick = selectedBenchIndex >= 0;
+    if (!isFieldPick && !isBenchPick) return `<div class="muted">Klikni na kolečko na hřišti nebo na střídačce a vyber hráčku.</div>`;
+    const currentId = isFieldPick ? matchday.fieldPlayerIds[selectedSlotIndex] : matchday.benchPlayerIds[selectedBenchIndex];
+    const usedIds = new Set([
+      ...matchday.fieldPlayerIds.filter((id, index) => id && (!isFieldPick || index !== selectedSlotIndex)),
+      ...matchday.benchPlayerIds.filter((id, index) => id && (!isBenchPick || index !== selectedBenchIndex)),
+    ]);
     return `<section class="chooser-block">
-      <div class="chooser-title"><strong>Výběr na pozici</strong><button data-clear-slot="${selectedSlotIndex}" type="button">Vyprázdnit</button></div>
+      <div class="chooser-title"><strong>${isFieldPick ? "Výběr na hřiště" : "Výběr na střídačku"}</strong><button data-clear-pick type="button">Odebrat</button></div>
       <div class="player-pick-list">
         ${players.length ? players.map((player) => {
           const disabled = usedIds.has(player.id);
-          const active = matchday.fieldPlayerIds[selectedSlotIndex] === player.id;
+          const active = currentId === player.id;
           return `<button class="player-pick ${active ? "active" : ""}" data-pick-player="${player.id}" ${disabled ? "disabled" : ""} type="button">${esc(displayPlayerName(player))}</button>`;
         }).join("") : `<div class="muted">Nejdřív přidej hráčky v záložce Týmy.</div>`}
       </div>
@@ -199,6 +212,7 @@
           const normalized = normalizeMatchday(matchday);
           Object.assign(matchday, normalized);
           selectedSlotIndex = -1;
+          selectedBenchIndex = -1;
         }
         save();
         renderMatchday();
@@ -207,32 +221,39 @@
     host.querySelectorAll("[data-slot]").forEach((button) => {
       button.addEventListener("click", () => {
         selectedSlotIndex = Number(button.dataset.slot);
+        selectedBenchIndex = -1;
+        renderMatchday();
+      });
+    });
+    host.querySelectorAll("[data-bench-slot]").forEach((button) => {
+      button.addEventListener("click", () => {
+        selectedBenchIndex = Number(button.dataset.benchSlot);
+        selectedSlotIndex = -1;
         renderMatchday();
       });
     });
     host.querySelectorAll("[data-pick-player]").forEach((button) => {
       button.addEventListener("click", () => {
         const playerId = button.dataset.pickPlayer;
-        matchday.fieldPlayerIds[selectedSlotIndex] = playerId;
-        matchday.benchPlayerIds = matchday.benchPlayerIds.filter((id) => id !== playerId);
+        if (selectedSlotIndex >= 0) {
+          matchday.fieldPlayerIds[selectedSlotIndex] = playerId;
+          matchday.benchPlayerIds = matchday.benchPlayerIds.filter((id) => id !== playerId);
+        }
+        if (selectedBenchIndex >= 0) {
+          matchday.benchPlayerIds[selectedBenchIndex] = playerId;
+          matchday.fieldPlayerIds = matchday.fieldPlayerIds.map((id) => id === playerId ? "" : id);
+        }
+        matchday.benchPlayerIds = trimTrailingEmpty(matchday.benchPlayerIds);
         save();
         renderMatchday();
       });
     });
-    host.querySelector("[data-clear-slot]")?.addEventListener("click", () => {
-      matchday.fieldPlayerIds[selectedSlotIndex] = "";
+    host.querySelector("[data-clear-pick]")?.addEventListener("click", () => {
+      if (selectedSlotIndex >= 0) matchday.fieldPlayerIds[selectedSlotIndex] = "";
+      if (selectedBenchIndex >= 0) matchday.benchPlayerIds[selectedBenchIndex] = "";
+      matchday.benchPlayerIds = trimTrailingEmpty(matchday.benchPlayerIds);
       save();
       renderMatchday();
-    });
-    host.querySelectorAll("[data-bench-player]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const playerId = button.dataset.benchPlayer;
-        matchday.benchPlayerIds = matchday.benchPlayerIds.includes(playerId)
-          ? matchday.benchPlayerIds.filter((id) => id !== playerId)
-          : [...matchday.benchPlayerIds, playerId];
-        save();
-        renderMatchday();
-      });
     });
     host.querySelector("[data-open-calendar-session]")?.addEventListener("click", () => {
       if (typeof openCalendarSession === "function") openCalendarSession(session.id);
@@ -243,6 +264,12 @@
   function playerPhoto(player) {
     if (player.photoData) return `<img src="${esc(player.photoData)}" alt="" />`;
     return esc((window.playerInitials ? window.playerInitials(player) : initials(player)));
+  }
+
+  function trimTrailingEmpty(items) {
+    const next = [...items];
+    while (next.length && !next[next.length - 1]) next.pop();
+    return next;
   }
 
   function initials(player) {

@@ -164,9 +164,15 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); box-shad
 .pitch-player img { width: 100%; height: 100%; object-fit: cover; }
 .pitch-slot small { max-width: 78px; color: #fff; font-size: 11px; line-height: 1.1; text-shadow: 0 1px 2px rgba(0,0,0,.24); }
 .bench-panel { display: grid; gap: 8px; }
-.bench-list, .player-pick-list { display: flex; flex-wrap: wrap; gap: 7px; }
-.bench-player, .player-pick { border: 1px solid var(--line); border-radius: 7px; background: #fff; min-height: 32px; padding: 0 9px; font-size: 12px; font-weight: 800; }
-.bench-player.active, .player-pick.active { border-color: rgba(0,122,61,.32); background: var(--soft); color: var(--green-dark); }
+.bench-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 9px; }
+.player-pick-list { display: flex; flex-wrap: wrap; gap: 7px; }
+.bench-slot { display: grid; justify-items: center; gap: 5px; border: 1px solid var(--line); border-radius: 8px; background: #fff; min-height: 92px; padding: 8px 6px; color: var(--text); }
+.bench-slot.active { border-color: rgba(0,122,61,.42); background: var(--soft); }
+.bench-circle { width: 46px; height: 46px; border-radius: 999px; display: grid; place-items: center; overflow: hidden; border: 1px solid rgba(0,122,61,.22); background: #f7faf7; color: var(--green-dark); font-size: 13px; font-weight: 900; }
+.bench-circle img { width: 100%; height: 100%; object-fit: cover; }
+.bench-slot small { max-width: 68px; color: var(--muted); font-size: 11px; line-height: 1.1; text-align: center; }
+.player-pick { border: 1px solid var(--line); border-radius: 7px; background: #fff; min-height: 32px; padding: 0 9px; font-size: 12px; font-weight: 800; }
+.player-pick.active { border-color: rgba(0,122,61,.32); background: var(--soft); color: var(--green-dark); }
 .player-pick-dialog { width: min(520px, calc(100vw - 24px)); }
 
 .setup-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
@@ -200,7 +206,7 @@ dialog::backdrop { background: rgba(6,63,47,.34); }
   .app { display: block; }
   .sidebar { position: fixed; inset: auto 0 0 0; z-index: 20; height: 66px; flex-direction: row; padding: 8px; }
   .brand { display: none; }
-.nav { grid-template-columns: repeat(5,1fr); width: 100%; }
+  .nav { grid-template-columns: repeat(5,1fr); width: 100%; }
   .main { padding-bottom: 72px; }
   .topbar { position: static; grid-template-columns: 1fr; }
   .calendar-grid, .form-row, .progress-strip { grid-template-columns: 1fr; }
