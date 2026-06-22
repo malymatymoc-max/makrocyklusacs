@@ -4,6 +4,8 @@
   let selectedSlotIndex = -1;
   let selectedBenchIndex = -1;
   let matchdayTicker = 0;
+  let liveMode = false;
+  let goalPickerOpen = false;
 
   function migrateMatchdays(nextState = state) {
     const next = { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
@@ -79,6 +81,9 @@
     if (!list || !detail) return;
 
     const matches = matchSessions();
+    const layout = document.querySelector(".matchday-layout");
+    layout?.classList.toggle("live-mode", liveMode);
+    document.body.classList.toggle("matchday-live-active", liveMode && document.body.dataset.activeView === "matchday");
     if (!matches.length) {
       list.innerHTML = `<div class="muted">Zatím není v kalendáři žádné utkání.</div>`;
       detail.innerHTML = `<div class="matchday-empty"><p>Vytvoř v kalendáři událost typu Utkání a potom ji otevři tady.</p></div>`;
@@ -92,6 +97,8 @@
         selectedMatchSessionId = button.dataset.matchSession;
         selectedSlotIndex = -1;
         selectedBenchIndex = -1;
+        liveMode = false;
+        goalPickerOpen = false;
         matchdayForSession(sessionById(selectedMatchSessionId));
         renderMatchday();
       });
@@ -129,6 +136,12 @@
       selectedBenchIndex = -1;
     }
 
+    if (liveMode) {
+      host.innerHTML = liveMatchScreen(session, matchday, teamItem, players, positions);
+      bindMatchdayDetail(host, matchday, session, players);
+      return;
+    }
+
     host.innerHTML = `
       <div class="matchday-dashboard">
         <div class="matchday-header">
@@ -136,7 +149,10 @@
             <h2>${esc(teamItem?.name || "Tým")} vs ${esc(matchday.opponent || "Soupeř")}</h2>
             <p>${fmtFullDate(session.date)}${session.startTime ? ` · ${esc(session.startTime)}` : ""}${session.place ? ` · ${esc(session.place)}` : ""}</p>
           </div>
-          <button class="secondary" data-open-calendar-session="${session.id}" type="button">Otevřít v kalendáři</button>
+          <div class="matchday-header-actions">
+            <button class="primary" data-live-mode="open" type="button">Spustit zápas</button>
+            <button class="secondary" data-open-calendar-session="${session.id}" type="button">Otevřít v kalendáři</button>
+          </div>
         </div>
         ${liveDashboard(matchday, teamItem, players)}
         <div class="matchday-grid">
@@ -220,6 +236,25 @@
   }
 
   function bindMatchdayDetail(host, matchday, session, players) {
+    host.querySelectorAll("[data-live-mode]").forEach((button) => {
+      button.addEventListener("click", () => {
+        liveMode = button.dataset.liveMode === "open";
+        goalPickerOpen = false;
+        selectedSlotIndex = -1;
+        selectedBenchIndex = -1;
+        renderMatchday();
+      });
+    });
+    host.querySelector("[data-open-goal-picker]")?.addEventListener("click", () => {
+      goalPickerOpen = true;
+      renderMatchday();
+    });
+    host.querySelectorAll("[data-close-goal-picker]").forEach((button) => {
+      button.addEventListener("click", () => {
+        goalPickerOpen = false;
+        renderMatchday();
+      });
+    });
     host.querySelectorAll("input[name], select[name]").forEach((inputEl) => {
       inputEl.addEventListener("change", () => {
         matchday[inputEl.name] = ["partsCount", "partMinutes", "warningMinutes"].includes(inputEl.name)
@@ -331,8 +366,7 @@
       <div class="goal-box">
         <strong>Gól ${esc(teamItem?.name || "náš tým")}</strong>
         <div class="goal-buttons">
-          ${roster.length ? roster.map((player) => `<button class="mini" data-goal-side="own" data-goal-player="${player.id}" type="button">${esc(displayPlayerName(player))}</button>`).join("") : `<span class="muted">Nejdřív vyber hráčky na hřiště nebo střídačku.</span>`}
-          <button class="mini" data-goal-side="own" data-own-goal="true" type="button">Vlastní gól soupeře</button>
+          <button class="mini" data-open-goal-picker type="button" ${roster.length ? "" : "disabled"}>Vybrat střelkyni</button>
         </div>
         <button class="danger subtle-danger" data-goal-side="opponent" type="button">Gól ${esc(matchday.opponent || "soupeř")}</button>
       </div>
@@ -343,6 +377,84 @@
     </section>`;
   }
 
+  function liveMatchScreen(session, matchday, teamItem, players, positions) {
+    const score = scoreLine(matchday);
+    const roster = selectedRoster(matchday, players);
+    const fieldCount = matchday.fieldPlayerIds.filter(Boolean).length;
+    const benchCount = matchday.benchPlayerIds.filter(Boolean).length;
+    return `<div class="match-live-screen">
+      <div class="match-live-top">
+        <button class="secondary live-back" data-live-mode="close" type="button">← Příprava</button>
+        <div class="live-score-card">
+          <small>${esc(teamItem?.name || "My")}</small>
+          <strong>${score.own}</strong>
+        </div>
+        <span class="live-score-separator">:</span>
+        <div class="live-score-card">
+          <small>${esc(matchday.opponent || "Soupeř")}</small>
+          <strong>${score.opponent}</strong>
+        </div>
+        <button class="primary live-goal-button" data-open-goal-picker type="button" ${roster.length ? "" : "disabled"}>Gól ${esc(teamItem?.name || "tým")}</button>
+        <button class="secondary live-goal-button" data-goal-side="opponent" type="button">Gól ${esc(matchday.opponent || "soupeř")}</button>
+      </div>
+
+      <div class="match-live-clock">
+        <div>
+          <span>Část ${matchday.currentPart}/${matchday.partsCount}</span>
+          <strong>${formatClock(currentRemaining(matchday))}</strong>
+        </div>
+        <div class="live-clock-actions">
+          <button class="primary" data-timer="${matchday.timerRunning ? "pause" : "start"}" type="button">${matchday.timerRunning ? "Pauza" : "Start"}</button>
+          <button class="secondary" data-timer="reset" type="button">Reset části</button>
+          <button class="secondary" data-timer="next" type="button">Další část</button>
+        </div>
+        <div class="live-shot-control">
+          <button class="secondary" data-shot="-1" type="button">−</button>
+          <strong>${matchday.shots}</strong>
+          <span>střel</span>
+          <button class="primary" data-shot="1" type="button">+</button>
+        </div>
+      </div>
+
+      <div class="match-live-body">
+        <section class="live-lineup-card">
+          <div class="live-section-head">
+            <div><h2>Sestava</h2><p>${fieldCount}/${positions.length} na hřišti · ${benchCount} na střídačce</p></div>
+          </div>
+          <div class="live-lineup-grid">
+            <div class="pitch live-pitch">${pitchSlots(matchday, players, positions)}</div>
+            <aside class="live-bench">
+              <div class="live-section-head"><div><h3>Střídačka</h3><p>Jen hráčky vybrané pro utkání.</p></div></div>
+              <div class="bench-list live-bench-list">${Array.from({ length: Math.max(6, matchday.benchPlayerIds.length + 1) }, (_, index) => benchSlot(matchday, players, index)).join("")}</div>
+              ${playerPicker(matchday, players)}
+            </aside>
+          </div>
+        </section>
+
+        <section class="live-log-card">
+          <div class="live-section-head"><div><h3>Průběh utkání</h3><p>Góly můžeš křížkem opravit.</p></div></div>
+          <div class="goal-log live-goal-log">
+            ${matchday.goals.length ? [...matchday.goals].reverse().map((goal) => goalLogItem(goal, matchday, players, teamItem)).join("") : `<div class="muted">Zatím bez gólů.</div>`}
+          </div>
+        </section>
+      </div>
+      ${goalPickerOpen ? goalPicker(matchday, teamItem, players) : ""}
+    </div>`;
+  }
+
+  function goalPicker(matchday, teamItem, players) {
+    const roster = selectedRoster(matchday, players);
+    return `<div class="goal-picker-backdrop">
+      <section class="goal-picker-modal">
+        <div class="chooser-title"><strong>Kdo dal gól ${esc(teamItem?.name || "náš tým")}?</strong><button data-close-goal-picker type="button">×</button></div>
+        <div class="goal-picker-list">
+          ${roster.map((player) => `<button class="goal-player-button" data-goal-side="own" data-goal-player="${player.id}" type="button"><span class="bench-circle">${playerPhoto(player)}</span><strong>${esc(displayPlayerName(player))}</strong></button>`).join("")}
+          <button class="goal-player-button" data-goal-side="own" data-own-goal="true" type="button"><span class="bench-circle">VG</span><strong>Vlastní gól soupeře</strong></button>
+        </div>
+      </section>
+    </div>`;
+  }
+
   function selectedRoster(matchday, players) {
     const ids = [...new Set([...matchday.fieldPlayerIds, ...matchday.benchPlayerIds].filter(Boolean))];
     return ids.map((id) => players.find((player) => player.id === id)).filter(Boolean);
@@ -351,6 +463,7 @@
   function addGoal(matchday, side, playerId = "", ownGoal = false) {
     const elapsed = Math.max(0, matchday.partMinutes * 60 - currentRemaining(matchday));
     matchday.goals.push({ id: uid("goal"), side, playerId, ownGoal, part: matchday.currentPart, second: elapsed });
+    goalPickerOpen = false;
     save();
     renderMatchday();
   }
@@ -475,6 +588,9 @@
   const matchdayRender = window.render;
   render = function renderWithMatchday() {
     matchdayRender();
+    if (document.body.dataset.activeView !== "matchday") {
+      document.body.classList.remove("matchday-live-active");
+    }
     renderMatchday();
   };
 
