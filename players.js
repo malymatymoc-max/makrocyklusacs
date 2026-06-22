@@ -1,4 +1,6 @@
 (function () {
+  let playerDialogTeamId = "";
+
   function migratePlayers(nextState = state) {
     const next = { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
     next.players = (next.players || []).map((player) => ({
@@ -36,29 +38,50 @@
     const grid = document.querySelector("#playersGrid");
     if (!title || !meta || !grid) return;
 
-    const currentTeam = team();
-    const players = playersForTeam();
-    title.textContent = currentTeam?.name || "Tým";
-    meta.textContent = currentTeam ? `${players.length} hráček v soupisce` : "Nejdřív vytvoř tým.";
+    const totalPlayers = (state.players || []).length;
+    title.textContent = "Týmy";
+    meta.textContent = state.teams.length ? `${state.teams.length} týmů · ${totalPlayers} hráček celkem` : "Nejdřív vytvoř tým.";
 
-    if (!currentTeam) {
+    if (!state.teams.length) {
       grid.innerHTML = `<div class="muted">Nejdřív vytvoř tým v nastavení.</div>`;
       return;
     }
 
-    grid.innerHTML = players.length ? players.map((player) => `
-      <button class="player-card" data-player="${player.id}" type="button">
-        ${photoMarkup(player)}
-        <span>
-          <strong>${esc(playerName(player))}</strong>
-          <span>${player.birthDate ? `Nar. ${fmtFullDate(player.birthDate)}` : "Datum narození nevyplněno"}</span>
-        </span>
-      </button>
-    `).join("") : `<div class="muted">Zatím tu není žádná hráčka.</div>`;
+    grid.innerHTML = state.teams.map((rosterTeam) => {
+      const players = playersForTeam(rosterTeam.id);
+      return `<section class="team-roster-card">
+        <div class="team-roster-head">
+          <div class="team-roster-title">
+            <i class="team-roster-dot" style="background:${esc(rosterTeam.color || "#007a3d")}"></i>
+            <span><strong>${esc(rosterTeam.name)}</strong><span>${players.length} hráček</span></span>
+          </div>
+          <button class="mini" data-add-player="${rosterTeam.id}" type="button">+ Hráčka</button>
+        </div>
+        <div class="team-roster-list">
+          ${players.length ? players.map((player) => `
+            <button class="player-card" data-player="${player.id}" type="button">
+              ${photoMarkup(player)}
+              <span>
+                <strong>${esc(playerName(player))}</strong>
+                <span>${player.birthDate ? `Nar. ${fmtFullDate(player.birthDate)}` : "Datum narození nevyplněno"}</span>
+              </span>
+            </button>
+          `).join("") : `<div class="muted">Zatím tu není žádná hráčka.</div>`}
+        </div>
+      </section>`;
+    }).join("");
 
     grid.querySelectorAll("[data-player]").forEach((button) => {
-      button.addEventListener("click", () => openDialog("player", button.dataset.player));
+      button.addEventListener("click", () => openPlayerDialog(state.players.find((player) => player.id === button.dataset.player)?.teamId || "", button.dataset.player));
     });
+    grid.querySelectorAll("[data-add-player]").forEach((button) => {
+      button.addEventListener("click", () => openPlayerDialog(button.dataset.addPlayer));
+    });
+  }
+
+  function openPlayerDialog(teamId, id = "") {
+    playerDialogTeamId = teamId || state.selectedTeamId || state.teams[0]?.id || "";
+    openDialog("player", id);
   }
 
   function playerFields(item = {}) {
@@ -142,6 +165,9 @@
 
   const playersOpenDialog = window.openDialog;
   openDialog = function openDialogWithPlayers(type, id = "") {
+    if (type === "player" && id) {
+      playerDialogTeamId = state.players.find((player) => player.id === id)?.teamId || playerDialogTeamId;
+    }
     playersOpenDialog(type, id);
     if (type === "player") bindPlayerPhotoInput();
   };
@@ -169,7 +195,7 @@
     if (type === "player") {
       return {
         id,
-        teamId: state.selectedTeamId,
+        teamId: playerDialogTeamId || state.players.find((player) => player.id === id)?.teamId || state.selectedTeamId,
         firstName: data.firstName || "",
         lastName: data.lastName || "",
         birthDate: data.birthDate || "",
@@ -184,15 +210,6 @@
     state = migratePlayers(state);
     playersEnsureSelection();
   };
-
-  document.querySelector("#addPlayer")?.addEventListener("click", () => {
-    if (!state.selectedTeamId) {
-      showView("setup");
-      openDialog("team");
-      return;
-    }
-    openDialog("player");
-  });
 
   window.playersForTeam = playersForTeam;
   window.playerName = playerName;
