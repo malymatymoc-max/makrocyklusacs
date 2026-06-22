@@ -3,6 +3,7 @@
   let selectedMatchSessionId = "";
   let selectedSlotIndex = -1;
   let selectedBenchIndex = -1;
+  let matchdayTicker = 0;
 
   function migrateMatchdays(nextState = state) {
     const next = { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
@@ -24,6 +25,19 @@
       warningMinutes: Math.max(1, Number(matchday.warningMinutes || 4)),
       fieldPlayerIds: Array.from({ length: positions.length }, (_, index) => matchday.fieldPlayerIds?.[index] || ""),
       benchPlayerIds: Array.isArray(matchday.benchPlayerIds) ? matchday.benchPlayerIds.filter(Boolean) : [],
+      currentPart: Math.max(1, Number(matchday.currentPart || 1)),
+      timerRemaining: Number.isFinite(Number(matchday.timerRemaining)) ? Number(matchday.timerRemaining) : Math.max(1, Number(matchday.partMinutes || 12)) * 60,
+      timerRunning: Boolean(matchday.timerRunning),
+      timerStartedAt: Number(matchday.timerStartedAt || 0),
+      shots: Math.max(0, Number(matchday.shots || 0)),
+      goals: Array.isArray(matchday.goals) ? matchday.goals.map((goal) => ({
+        id: goal.id || uid("goal"),
+        side: goal.side === "opponent" ? "opponent" : "own",
+        playerId: goal.playerId || "",
+        ownGoal: Boolean(goal.ownGoal),
+        part: Math.max(1, Number(goal.part || 1)),
+        second: Math.max(0, Number(goal.second || 0)),
+      })) : [],
     };
   }
 
@@ -107,6 +121,8 @@
     const teamItem = state.teams.find((item) => item.id === session.teamId);
     const players = window.playersForTeam ? window.playersForTeam(session.teamId) : (state.players || []).filter((player) => player.teamId === session.teamId);
     const positions = formationPositions(matchday.format);
+    syncTimer(matchday);
+    if (matchday.timerRunning) startTicker();
     if (matchday.fieldPlayerIds.length !== positions.length) {
       matchday.fieldPlayerIds = normalizeMatchday(matchday).fieldPlayerIds;
       selectedSlotIndex = -1;
@@ -122,6 +138,7 @@
           </div>
           <button class="secondary" data-open-calendar-session="${session.id}" type="button">Otevřít v kalendáři</button>
         </div>
+        ${liveDashboard(matchday, teamItem, players)}
         <div class="matchday-grid">
           <div class="match-settings">
             ${matchSettings(matchday)}
@@ -156,7 +173,7 @@
   function pitchSlots(matchday, players, positions) {
     return positions.map((position, index) => {
       const player = players.find((item) => item.id === matchday.fieldPlayerIds[index]);
-      return `<button class="pitch-slot" style="--x:${position.x}%;--y:${position.y}%" data-slot="${index}" type="button">
+      return `<button class="pitch-slot ${selectedSlotIndex === index ? "active" : ""}" style="--x:${position.x}%;--y:${position.y}%" data-slot="${index}" type="button">
         <span class="pitch-player">${player ? playerPhoto(player) : (position.gk ? "GK" : "+")}</span>
         <small>${player ? esc(displayPlayerName(player)) : (position.gk ? "brankář" : "volné")}</small>
       </button>`;
@@ -208,6 +225,8 @@
         matchday[inputEl.name] = ["partsCount", "partMinutes", "warningMinutes"].includes(inputEl.name)
           ? Math.max(1, Number(inputEl.value || 1))
           : inputEl.value;
+        if (inputEl.name === "partMinutes" && !matchday.timerRunning) matchday.timerRemaining = Math.max(1, Number(inputEl.value || 1)) * 60;
+        if (inputEl.name === "partsCount") matchday.currentPart = Math.min(matchday.currentPart, matchday.partsCount);
         if (inputEl.name === "format") {
           const normalized = normalizeMatchday(matchday);
           Object.assign(matchday, normalized);
@@ -259,6 +278,163 @@
       if (typeof openCalendarSession === "function") openCalendarSession(session.id);
       showView("calendar");
     });
+    host.querySelectorAll("[data-timer]").forEach((button) => {
+      button.addEventListener("click", () => handleTimer(matchday, button.dataset.timer));
+    });
+    host.querySelectorAll("[data-shot]").forEach((button) => {
+      button.addEventListener("click", () => {
+        matchday.shots = Math.max(0, Number(matchday.shots || 0) + Number(button.dataset.shot));
+        save();
+        renderMatchday();
+      });
+    });
+    host.querySelectorAll("[data-goal-side]").forEach((button) => {
+      button.addEventListener("click", () => {
+        addGoal(matchday, button.dataset.goalSide, button.dataset.goalPlayer || "", button.dataset.ownGoal === "true");
+      });
+    });
+    host.querySelectorAll("[data-remove-goal]").forEach((button) => {
+      button.addEventListener("click", () => {
+        matchday.goals = matchday.goals.filter((goal) => goal.id !== button.dataset.removeGoal);
+        save();
+        renderMatchday();
+      });
+    });
+  }
+
+  function liveDashboard(matchday, teamItem, players) {
+    const score = scoreLine(matchday);
+    const roster = selectedRoster(matchday, players);
+    return `<section class="live-panel">
+      <div class="scoreboard">
+        <div><small>${esc(teamItem?.name || "My")}</small><strong>${score.own}</strong></div>
+        <span>:</span>
+        <div><small>${esc(matchday.opponent || "Soupeř")}</small><strong>${score.opponent}</strong></div>
+      </div>
+      <div class="timer-box">
+        <span>Část ${matchday.currentPart}/${matchday.partsCount}</span>
+        <strong>${formatClock(currentRemaining(matchday))}</strong>
+        <div class="timer-actions">
+          <button class="secondary" data-timer="${matchday.timerRunning ? "pause" : "start"}" type="button">${matchday.timerRunning ? "Pauza" : "Start"}</button>
+          <button class="secondary" data-timer="reset" type="button">Reset</button>
+          <button class="secondary" data-timer="next" type="button">Další část</button>
+        </div>
+      </div>
+      <div class="shot-box">
+        <span>Střely</span>
+        <strong>${matchday.shots}</strong>
+        <div class="timer-actions">
+          <button class="secondary" data-shot="-1" type="button">-</button>
+          <button class="primary" data-shot="1" type="button">+ střela</button>
+        </div>
+      </div>
+      <div class="goal-box">
+        <strong>Gól ${esc(teamItem?.name || "náš tým")}</strong>
+        <div class="goal-buttons">
+          ${roster.length ? roster.map((player) => `<button class="mini" data-goal-side="own" data-goal-player="${player.id}" type="button">${esc(displayPlayerName(player))}</button>`).join("") : `<span class="muted">Nejdřív vyber hráčky na hřiště nebo střídačku.</span>`}
+          <button class="mini" data-goal-side="own" data-own-goal="true" type="button">Vlastní gól soupeře</button>
+        </div>
+        <button class="danger subtle-danger" data-goal-side="opponent" type="button">Gól ${esc(matchday.opponent || "soupeř")}</button>
+      </div>
+      <div class="goal-log">
+        <strong>Průběh utkání</strong>
+        ${matchday.goals.length ? [...matchday.goals].reverse().map((goal) => goalLogItem(goal, matchday, players, teamItem)).join("") : `<div class="muted">Zatím bez gólů.</div>`}
+      </div>
+    </section>`;
+  }
+
+  function selectedRoster(matchday, players) {
+    const ids = [...new Set([...matchday.fieldPlayerIds, ...matchday.benchPlayerIds].filter(Boolean))];
+    return ids.map((id) => players.find((player) => player.id === id)).filter(Boolean);
+  }
+
+  function addGoal(matchday, side, playerId = "", ownGoal = false) {
+    const elapsed = Math.max(0, matchday.partMinutes * 60 - currentRemaining(matchday));
+    matchday.goals.push({ id: uid("goal"), side, playerId, ownGoal, part: matchday.currentPart, second: elapsed });
+    save();
+    renderMatchday();
+  }
+
+  function goalLogItem(goal, matchday, players, teamItem) {
+    const player = players.find((item) => item.id === goal.playerId);
+    const label = goal.side === "opponent"
+      ? `Gól ${matchday.opponent || "soupeř"}`
+      : goal.ownGoal ? `Vlastní gól soupeře` : `Gól ${displayPlayerName(player || {})}`;
+    return `<div class="goal-log-row">
+      <span>${goal.part}. část · ${formatClock(goal.second)} · ${esc(label)}</span>
+      <button data-remove-goal="${goal.id}" type="button">×</button>
+    </div>`;
+  }
+
+  function scoreLine(matchday) {
+    return matchday.goals.reduce((score, goal) => {
+      if (goal.side === "opponent") score.opponent += 1;
+      else score.own += 1;
+      return score;
+    }, { own: 0, opponent: 0 });
+  }
+
+  function handleTimer(matchday, action) {
+    syncTimer(matchday);
+    if (action === "start" && matchday.timerRemaining > 0) {
+      matchday.timerRunning = true;
+      matchday.timerStartedAt = Date.now();
+      startTicker();
+    }
+    if (action === "pause") {
+      matchday.timerRunning = false;
+      matchday.timerStartedAt = 0;
+    }
+    if (action === "reset") {
+      matchday.timerRunning = false;
+      matchday.timerStartedAt = 0;
+      matchday.timerRemaining = matchday.partMinutes * 60;
+    }
+    if (action === "next") {
+      matchday.timerRunning = false;
+      matchday.timerStartedAt = 0;
+      matchday.currentPart = Math.min(matchday.partsCount, matchday.currentPart + 1);
+      matchday.timerRemaining = matchday.partMinutes * 60;
+    }
+    save();
+    renderMatchday();
+  }
+
+  function syncTimer(matchday) {
+    if (!matchday.timerRunning) return;
+    const elapsed = Math.floor((Date.now() - matchday.timerStartedAt) / 1000);
+    matchday.timerRemaining = Math.max(0, matchday.timerRemaining - elapsed);
+    matchday.timerStartedAt = Date.now();
+    if (matchday.timerRemaining <= 0) {
+      matchday.timerRunning = false;
+      matchday.timerStartedAt = 0;
+      save();
+    }
+  }
+
+  function currentRemaining(matchday) {
+    if (!matchday.timerRunning) return Math.max(0, Number(matchday.timerRemaining || 0));
+    const elapsed = Math.floor((Date.now() - matchday.timerStartedAt) / 1000);
+    return Math.max(0, Number(matchday.timerRemaining || 0) - elapsed);
+  }
+
+  function startTicker() {
+    if (matchdayTicker) return;
+    matchdayTicker = window.setInterval(() => {
+      const session = sessionById(selectedMatchSessionId);
+      const matchday = state.matchdays.find((item) => item.sessionId === session?.id);
+      if (!matchday?.timerRunning) {
+        window.clearInterval(matchdayTicker);
+        matchdayTicker = 0;
+        return;
+      }
+      renderMatchday();
+    }, 1000);
+  }
+
+  function formatClock(seconds) {
+    const safe = Math.max(0, Math.floor(Number(seconds || 0)));
+    return `${String(Math.floor(safe / 60)).padStart(2, "0")}:${String(safe % 60).padStart(2, "0")}`;
   }
 
   function playerPhoto(player) {
