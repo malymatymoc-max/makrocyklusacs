@@ -124,11 +124,12 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); box-shad
 
 .players-grid { display: grid; gap: 14px; padding: 16px; }
 .team-roster-card { border: 1px solid var(--line); border-radius: 8px; background: #fff; overflow: hidden; }
-.team-roster-head { display: flex; gap: 12px; justify-content: space-between; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line); background: #fbfdfb; }
+.team-roster-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line); background: #fbfdfb; }
 .team-roster-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .team-roster-dot { width: 9px; height: 9px; border-radius: 999px; background: var(--green); flex: none; }
 .team-roster-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .team-roster-title span { color: var(--muted); font-size: 12px; }
+.team-roster-toggle { min-height: 30px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--text); padding: 0 9px; font-size: 12px; font-weight: 800; }
 .team-roster-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; padding: 12px; }
 .player-card { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; align-items: center; width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; text-align: left; }
 .player-card:hover { border-color: rgba(0,122,61,.28); background: #fbfdfb; }

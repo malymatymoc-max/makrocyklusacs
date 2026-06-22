@@ -1,5 +1,6 @@
 (function () {
   let playerDialogTeamId = "";
+  const openRosterTeamIds = new Set();
 
   function migratePlayers(nextState = state) {
     const next = { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
@@ -49,15 +50,19 @@
 
     grid.innerHTML = state.teams.map((rosterTeam) => {
       const players = playersForTeam(rosterTeam.id);
+      const isOpen = openRosterTeamIds.has(rosterTeam.id);
       return `<section class="team-roster-card">
         <div class="team-roster-head">
+          <button class="team-roster-toggle" data-toggle-roster="${rosterTeam.id}" type="button" aria-expanded="${isOpen ? "true" : "false"}">
+            <span>${isOpen ? "Sbalit" : "Rozbalit"}</span>
+          </button>
           <div class="team-roster-title">
             <i class="team-roster-dot" style="background:${esc(rosterTeam.color || "#007a3d")}"></i>
             <span><strong>${esc(rosterTeam.name)}</strong><span>${players.length} hráček</span></span>
           </div>
           <button class="mini" data-add-player="${rosterTeam.id}" type="button">+ Hráčka</button>
         </div>
-        <div class="team-roster-list">
+        <div class="team-roster-list ${isOpen ? "" : "hidden"}">
           ${players.length ? players.map((player) => `
             <button class="player-card" data-player="${player.id}" type="button">
               ${photoMarkup(player)}
@@ -76,6 +81,13 @@
     });
     grid.querySelectorAll("[data-add-player]").forEach((button) => {
       button.addEventListener("click", () => openPlayerDialog(button.dataset.addPlayer));
+    });
+    grid.querySelectorAll("[data-toggle-roster]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (openRosterTeamIds.has(button.dataset.toggleRoster)) openRosterTeamIds.delete(button.dataset.toggleRoster);
+        else openRosterTeamIds.add(button.dataset.toggleRoster);
+        renderPlayers();
+      });
     });
   }
 
