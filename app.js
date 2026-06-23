@@ -148,7 +148,6 @@ function bind() {
   });
   $("#newSession").addEventListener("click", () => openNewSessionDialog(dateKey(new Date())));
   $("#quickSession").addEventListener("click", () => openNewSessionDialog(dateKey(new Date())));
-  $("#quickPeriod").addEventListener("click", () => openDialog("period"));
   $("#deleteSession").addEventListener("click", deleteSelectedSession);
   els.deleteSeries.addEventListener("click", deleteSelectedSeries);
   els.team.addEventListener("change", () => {
