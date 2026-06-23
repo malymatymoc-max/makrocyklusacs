@@ -210,7 +210,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); box-shad
 .pitch-slot small { max-width: 94px; color: #fff; font-size: 11px; line-height: 1.1; text-shadow: 0 1px 2px rgba(0,0,0,.3); }
 .bench-panel { display: grid; gap: 8px; }
 .bench-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 9px; }
-.player-pick-list { display: flex; flex-wrap: wrap; gap: 7px; }
+.player-pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; max-height: min(58vh, 520px); overflow: auto; padding: 2px; }
 .bench-slot { display: grid; justify-items: center; align-content: center; gap: 5px; border: 1px solid var(--line); border-radius: 8px; background: #fff; min-height: 104px; padding: 8px 6px; color: var(--text); }
 .bench-slot.active { border-color: rgba(0,122,61,.42); background: var(--soft); }
 .bench-slot.active .bench-circle { border-color: #d28a16; box-shadow: 0 0 0 4px rgba(210,138,22,.18); }
@@ -219,9 +219,18 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); box-shad
 .bench-slot small { max-width: 68px; color: var(--muted); font-size: 11px; line-height: 1.1; text-align: center; }
 .player-time { display: inline-grid; place-items: center; min-height: 20px; min-width: 48px; padding: 2px 7px; border-radius: 999px; background: rgba(6,63,47,.82); color: #fff; font-size: 11px; line-height: 1; font-weight: 900; font-variant-numeric: tabular-nums; box-shadow: 0 5px 12px rgba(0,0,0,.16); }
 .bench-time { background: #eef5ef; color: var(--green-dark); box-shadow: none; }
-.player-pick { border: 1px solid var(--line); border-radius: 7px; background: #fff; min-height: 32px; padding: 0 9px; font-size: 12px; font-weight: 800; }
-.player-pick.active { border-color: rgba(0,122,61,.32); background: var(--soft); color: var(--green-dark); }
+.player-pick { display: grid; grid-template-columns: 48px minmax(0, 1fr); grid-template-rows: auto auto; gap: 2px 10px; align-items: center; border: 1px solid var(--line); border-radius: 8px; background: #fff; min-height: 68px; padding: 8px; font-size: 12px; font-weight: 800; text-align: left; }
+.player-pick .bench-circle { grid-row: 1 / span 2; width: 48px; height: 48px; }
+.player-pick strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player-pick small { color: var(--muted); font-size: 11px; }
+.player-pick.used { background: #f9fbf9; }
+.player-pick.active { border-color: rgba(0,122,61,.42); background: var(--soft); color: var(--green-dark); box-shadow: inset 0 0 0 1px rgba(0,122,61,.14); }
 .player-pick-dialog { width: min(520px, calc(100vw - 24px)); }
+.roster-picker-backdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 18px; background: rgba(6, 26, 18, .44); }
+.roster-picker-modal { width: min(720px, 100%); display: grid; gap: 14px; padding: 18px; border-radius: 8px; background: #fff; box-shadow: 0 28px 90px rgba(0,0,0,.34); }
+.roster-picker-modal .chooser-title strong { font-size: 20px; }
+.roster-picker-modal .chooser-title button { width: 38px; min-height: 38px; border-radius: 999px; font-size: 22px; }
+.roster-picker-actions { display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
 
 body.matchday-live-active { background: #eef3f7; }
 body.matchday-live-active .app { display: block; min-height: 100vh; }
