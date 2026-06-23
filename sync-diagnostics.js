@@ -76,7 +76,13 @@
     }
   }
 
-  window.addEventListener("load", () => {
-    window.setTimeout(runSyncDiagnostics, CHECK_DELAY);
-  });
+  function runWhenUnlocked() {
+    if (window.COACH_ACS_UNLOCKED) {
+      window.setTimeout(runSyncDiagnostics, CHECK_DELAY);
+      return;
+    }
+    window.addEventListener("coach-acs-unlocked", () => window.setTimeout(runSyncDiagnostics, CHECK_DELAY), { once: true });
+  }
+
+  window.addEventListener("load", runWhenUnlocked);
 })();

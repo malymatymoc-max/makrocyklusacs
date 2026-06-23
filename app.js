@@ -1,4 +1,6 @@
 const STORAGE_KEY = "makrocyklus-mvp-v1";
+const AUTH_KEY = "coach-acs-auth-v1";
+const AUTH_HASH = "79f981ce9f204697408b9b441fc00567731d7dd824003915b22bfff85cd6815e";
 const TYPES = ["TJ", "Skupinový TJ", "Pohybový TJ", "Utkání", "Turnaj", "Jiná událost", "Volno"];
 const SYNC_URL = "/api/state";
 const SUPABASE_STATE_ID = "main";
@@ -19,6 +21,7 @@ let remoteEnabled = false;
 let applyingRemote = false;
 let saveTimer = 0;
 let syncProvider = "local";
+let appStarted = false;
 
 const els = {
   team: $("#teamSelect"),
@@ -50,15 +53,72 @@ const els = {
   newSessionForm: $("#newSessionForm"),
   sessionEl: $("#sessionDialog"),
   deleteSeries: $("#deleteSeries"),
+  authForm: $("#authForm"),
+  authPassword: $("#authPassword"),
+  authError: $("#authError"),
+  logoutDevice: $("#logoutDevice"),
 };
 
 init();
 
 function init() {
   bind();
+  bindAuth();
+  if (isAuthorizedDevice()) unlockApp();
+  else lockApp();
+}
+
+function bindAuth() {
+  els.authForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (els.authError) els.authError.textContent = "";
+    const password = els.authPassword?.value || "";
+    if (!window.crypto?.subtle) {
+      if (els.authError) els.authError.textContent = "Pro ověření je potřeba otevřít aplikaci přes zabezpečenou adresu https.";
+      return;
+    }
+    const hash = await sha256(password);
+    if (hash !== AUTH_HASH) {
+      if (els.authError) els.authError.textContent = "Heslo nesedí. Zkus ho prosím znovu.";
+      els.authPassword?.select();
+      return;
+    }
+    localStorage.setItem(AUTH_KEY, AUTH_HASH);
+    if (els.authPassword) els.authPassword.value = "";
+    unlockApp();
+  });
+
+  els.logoutDevice?.addEventListener("click", () => {
+    localStorage.removeItem(AUTH_KEY);
+    window.location.reload();
+  });
+}
+
+function isAuthorizedDevice() {
+  return localStorage.getItem(AUTH_KEY) === AUTH_HASH;
+}
+
+function lockApp() {
+  window.COACH_ACS_UNLOCKED = false;
+  document.body.classList.add("auth-locked");
+  window.setTimeout(() => els.authPassword?.focus(), 50);
+}
+
+function unlockApp() {
+  window.COACH_ACS_UNLOCKED = true;
+  document.body.classList.remove("auth-locked");
+  if (appStarted) return;
+  appStarted = true;
   render();
   startSync();
   registerServiceWorker();
+  window.dispatchEvent(new CustomEvent("coach-acs-unlocked"));
+}
+
+async function sha256(value) {
+  const data = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function bind() {
