@@ -243,8 +243,8 @@ body.matchday-live-active .main { width: 100%; min-height: 100vh; overflow-x: hi
 .live-section-head h3 { font-size: 20px; }
 .live-lineup-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, .38fr); gap: 14px; align-items: start; }
 .live-pitch { min-height: min(62vh, 610px); border-radius: 8px; }
-.live-pitch .pitch-player { width: 84px; height: 84px; font-size: 17px; }
-.live-pitch .pitch-slot { min-width: 116px; }
+.live-pitch .pitch-player { width: 78px; height: 78px; font-size: 16px; }
+.live-pitch .pitch-slot { min-width: 108px; }
 .live-pitch .pitch-slot small { max-width: 112px; font-size: 12px; font-weight: 900; }
 .live-bench { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #f8faf8; }
 .live-bench-list { grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); }
