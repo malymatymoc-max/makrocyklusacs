@@ -41,6 +41,8 @@
       timerRunning,
       timerStartedAt: Number(matchday.timerStartedAt || 0),
       timerEndsAt,
+      playerTimes: normalizePlayerTimes(matchday.playerTimes),
+      playerTimeSyncedAt: Number(matchday.playerTimeSyncedAt || 0),
       shots: Math.max(0, Number(matchday.shots || 0)),
       goals: Array.isArray(matchday.goals) ? matchday.goals.map((goal) => ({
         id: goal.id || uid("goal"),
@@ -52,6 +54,17 @@
         gameIndex: Math.max(1, Number(goal.gameIndex || 1)),
       })) : [],
     };
+  }
+
+  function normalizePlayerTimes(value) {
+    return Object.entries(value && typeof value === "object" ? value : {}).reduce((times, [playerId, item]) => {
+      if (!playerId) return times;
+      times[playerId] = {
+        field: Math.max(0, Number(item?.field || 0)),
+        bench: Math.max(0, Number(item?.bench || 0)),
+      };
+      return times;
+    }, {});
   }
 
   function formationPositions(format) {
@@ -274,9 +287,11 @@
   function pitchSlots(matchday, players, positions) {
     return positions.map((position, index) => {
       const player = players.find((item) => item.id === matchday.fieldPlayerIds[index]);
+      const time = player ? formatClock(playerAreaSeconds(matchday, player.id, "field")) : "";
       return `<button class="pitch-slot ${selectedSlotIndex === index ? "active" : ""}" style="--x:${position.x}%;--y:${position.y}%" data-slot="${index}" type="button">
         <span class="pitch-player">${player ? playerPhoto(player) : (position.gk ? "GK" : "+")}</span>
         <small>${player ? esc(displayPlayerName(player)) : (position.gk ? "brankář" : "volné")}</small>
+        ${player ? `<span class="player-time">${time}</span>` : ""}
       </button>`;
     }).join("");
   }
@@ -293,9 +308,11 @@
 
   function benchSlot(matchday, players, index) {
     const player = players.find((item) => item.id === matchday.benchPlayerIds[index]);
+    const time = player ? formatClock(playerAreaSeconds(matchday, player.id, "bench")) : "";
     return `<button class="bench-slot ${selectedBenchIndex === index ? "active" : ""}" data-bench-slot="${index}" type="button">
       <span class="bench-circle">${player ? playerPhoto(player) : "+"}</span>
       <small>${player ? esc(displayPlayerName(player)) : "volné"}</small>
+      ${player ? `<span class="player-time bench-time">${time}</span>` : ""}
     </button>`;
   }
 
@@ -389,6 +406,7 @@
     host.querySelectorAll("[data-pick-player]").forEach((button) => {
       button.addEventListener("click", () => {
         const playerId = button.dataset.pickPlayer;
+        syncPlayerTimes(matchday);
         if (selectedSlotIndex >= 0) {
           matchday.fieldPlayerIds[selectedSlotIndex] = playerId;
           matchday.benchPlayerIds = matchday.benchPlayerIds.filter((id) => id !== playerId);
@@ -403,6 +421,7 @@
       });
     });
     host.querySelector("[data-clear-pick]")?.addEventListener("click", () => {
+      syncPlayerTimes(matchday);
       if (selectedSlotIndex >= 0) matchday.fieldPlayerIds[selectedSlotIndex] = "";
       if (selectedBenchIndex >= 0) matchday.benchPlayerIds[selectedBenchIndex] = "";
       matchday.benchPlayerIds = trimTrailingEmpty(matchday.benchPlayerIds);
@@ -449,6 +468,7 @@
     if (current) {
       const currentPlayerId = rosterSlotValue(matchday, current);
       if (currentPlayerId) {
+        syncPlayerTimes(matchday);
         const target = { area: targetArea, index: targetIndex };
         const targetPlayerId = rosterSlotValue(matchday, target);
         setRosterSlotValue(matchday, current, targetPlayerId);
@@ -613,33 +633,42 @@
       matchday.timerRunning = true;
       matchday.timerStartedAt = Date.now();
       matchday.timerEndsAt = Date.now() + Math.max(0, Number(matchday.timerRemaining || 0)) * 1000;
+      matchday.playerTimeSyncedAt = Date.now();
       startTicker();
     }
     if (action === "pause") {
+      syncPlayerTimes(matchday);
       matchday.timerRemaining = currentRemaining(matchday);
       matchday.timerRunning = false;
       matchday.timerStartedAt = 0;
       matchday.timerEndsAt = 0;
+      matchday.playerTimeSyncedAt = 0;
     }
     if (action === "reset") {
+      syncPlayerTimes(matchday);
       matchday.timerRunning = false;
       matchday.timerStartedAt = 0;
       matchday.timerEndsAt = 0;
       matchday.timerRemaining = matchday.partMinutes * 60;
+      matchday.playerTimeSyncedAt = 0;
     }
     if (action === "next") {
+      syncPlayerTimes(matchday);
       matchday.timerRunning = false;
       matchday.timerStartedAt = 0;
       matchday.timerEndsAt = 0;
       matchday.currentPart = Math.min(matchday.partsCount, matchday.currentPart + 1);
       matchday.timerRemaining = matchday.partMinutes * 60;
+      matchday.playerTimeSyncedAt = 0;
     }
     if (action === "next-match") {
+      syncPlayerTimes(matchday);
       matchday.timerRunning = false;
       matchday.timerStartedAt = 0;
       matchday.timerEndsAt = 0;
       matchday.currentGame = Math.min(Math.max(1, matchday.tournamentOpponents.length || matchday.currentGame), matchday.currentGame + 1);
       matchday.timerRemaining = matchday.partMinutes * 60;
+      matchday.playerTimeSyncedAt = 0;
     }
     save();
     renderMatchday();
@@ -716,13 +745,58 @@
   function syncTimer(matchday) {
     if (!matchday.timerRunning) return;
     if (!matchday.timerEndsAt) matchday.timerEndsAt = Date.now() + Math.max(0, Number(matchday.timerRemaining || 0)) * 1000;
+    syncPlayerTimes(matchday);
     matchday.timerRemaining = currentRemaining(matchday);
     if (matchday.timerRemaining <= 0) {
       matchday.timerRunning = false;
       matchday.timerStartedAt = 0;
       matchday.timerEndsAt = 0;
+      matchday.playerTimeSyncedAt = 0;
       save();
     }
+  }
+
+  function syncPlayerTimes(matchday) {
+    if (!matchday.playerTimes) matchday.playerTimes = {};
+    if (!matchday.timerRunning) return;
+    const now = Date.now();
+    const endAt = Number(matchday.timerEndsAt || 0) || now;
+    const lastSync = Number(matchday.playerTimeSyncedAt || matchday.timerStartedAt || now);
+    const effectiveNow = Math.min(now, endAt);
+    const elapsed = Math.max(0, Math.floor((effectiveNow - lastSync) / 1000));
+    if (!elapsed) {
+      matchday.playerTimeSyncedAt = effectiveNow;
+      return;
+    }
+    rosterAreaEntries(matchday).forEach(({ playerId, area }) => {
+      if (!matchday.playerTimes[playerId]) matchday.playerTimes[playerId] = { field: 0, bench: 0 };
+      matchday.playerTimes[playerId][area] = Math.max(0, Number(matchday.playerTimes[playerId][area] || 0)) + elapsed;
+    });
+    matchday.playerTimeSyncedAt = effectiveNow;
+  }
+
+  function rosterAreaEntries(matchday) {
+    const seen = new Set();
+    const field = matchday.fieldPlayerIds.filter(Boolean).map((playerId) => ({ playerId, area: "field" }));
+    const bench = matchday.benchPlayerIds.filter(Boolean).map((playerId) => ({ playerId, area: "bench" }));
+    return [...field, ...bench].filter(({ playerId }) => {
+      if (seen.has(playerId)) return false;
+      seen.add(playerId);
+      return true;
+    });
+  }
+
+  function playerAreaSeconds(matchday, playerId, area) {
+    const base = Math.max(0, Number(matchday.playerTimes?.[playerId]?.[area] || 0));
+    if (!matchday.timerRunning || !isPlayerCurrentlyInArea(matchday, playerId, area)) return base;
+    const now = Date.now();
+    const endAt = Number(matchday.timerEndsAt || 0) || now;
+    const lastSync = Number(matchday.playerTimeSyncedAt || matchday.timerStartedAt || now);
+    return base + Math.max(0, Math.floor((Math.min(now, endAt) - lastSync) / 1000));
+  }
+
+  function isPlayerCurrentlyInArea(matchday, playerId, area) {
+    return area === "field" ? matchday.fieldPlayerIds.includes(playerId) : matchday.benchPlayerIds.includes(playerId);
   }
 
   function currentRemaining(matchday) {
