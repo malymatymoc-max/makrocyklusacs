@@ -198,17 +198,18 @@ body.matchday-live-active { background: #eef3f7; }
 body.matchday-live-active .app { display: block; min-height: 100vh; }
 body.matchday-live-active .sidebar { display: none; }
 body.matchday-live-active #matchdayView { padding: 0; }
-body.matchday-live-active .main { min-height: 100vh; }
+body.matchday-live-active .main { width: 100%; min-height: 100vh; overflow-x: hidden; }
 .matchday-layout.live-mode { display: block; }
 .matchday-layout.live-mode > .panel:first-child { display: none; }
 .matchday-layout.live-mode .matchday-detail { min-height: 100vh; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
-.match-live-screen { min-height: 100vh; display: grid; gap: 14px; padding: 14px; background: #eef3f7; }
-.match-live-toolbar { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; }
+.match-live-screen { width: 100%; min-height: 100vh; display: grid; gap: 14px; padding: 14px; overflow-x: hidden; background: #eef3f7; }
+.match-live-toolbar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; }
 .live-back { min-height: 48px; border-radius: 8px; font-size: 15px; }
+.live-report-button { min-height: 48px; border-radius: 8px; }
 .live-match-title { min-height: 48px; display: grid; align-content: center; padding: 0 4px; }
 .live-match-title h1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 24px; }
 .live-match-title p { font-size: 13px; }
-.match-live-controls { display: grid; grid-template-columns: minmax(240px, .9fr) minmax(300px, 1.1fr) minmax(170px, .62fr) minmax(250px, .9fr); gap: 12px; }
+.match-live-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); gap: 12px; }
 .live-control-card { min-height: 166px; display: grid; gap: 10px; padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: #fff; box-shadow: var(--shadow); }
 .live-control-card > span, .live-clock-card > span, .live-shots-card > span, .live-goals-card > span { color: var(--muted); font-size: 14px; font-weight: 900; }
 .live-score-card { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; text-align: center; }
@@ -224,12 +225,12 @@ body.matchday-live-active .main { min-height: 100vh; }
 .live-shot-control { display: grid; grid-template-columns: 52px minmax(92px, 1fr); gap: 9px; align-items: center; }
 .live-goals-card { align-content: center; }
 .live-goals-card .live-goal-button { width: 100%; }
-.match-live-body { display: grid; grid-template-columns: minmax(640px, 1fr) minmax(300px, .36fr); gap: 14px; align-items: start; }
+.match-live-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .34fr); gap: 14px; align-items: start; }
 .live-lineup-card, .live-log-card { padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: #fff; box-shadow: var(--shadow); }
 .live-section-head { display: flex; justify-content: space-between; align-items: start; gap: 12px; margin-bottom: 12px; }
 .live-section-head h2 { font-size: 28px; }
 .live-section-head h3 { font-size: 20px; }
-.live-lineup-grid { display: grid; grid-template-columns: minmax(460px, 1fr) minmax(260px, .4fr); gap: 14px; align-items: start; }
+.live-lineup-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, .38fr); gap: 14px; align-items: start; }
 .live-pitch { min-height: min(62vh, 610px); border-radius: 8px; }
 .live-pitch .pitch-player { width: 74px; height: 74px; font-size: 16px; }
 .live-pitch .pitch-slot { min-width: 98px; }
@@ -273,7 +274,7 @@ dialog::backdrop { background: rgba(6,63,47,.34); }
   .brand span:not(.brand-icon), .quick-actions { display: none; }
   .nav-btn { padding: 0 8px; text-align: center; font-size: 11px; }
   .calendar-board, .calendar-layout, .setup-grid, .matchday-layout, .matchday-grid, .live-panel { grid-template-columns: 1fr; }
-  .match-live-controls, .match-live-body, .live-lineup-grid { grid-template-columns: 1fr; }
+  .match-live-body, .live-lineup-grid { grid-template-columns: 1fr; }
   .live-shot-control { justify-content: start; }
   .editor-panel { max-height: none; }
 }
