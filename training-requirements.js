@@ -80,7 +80,7 @@
 
   function ratedSessions(kind, id) {
     const key = kind === "goal" ? "goalRatings" : "detailRatings";
-    return sessions()
+    return macroSessions()
       .map((session) => Number(session[key]?.[id] || 0))
       .filter((rating) => rating > 0);
   }
@@ -93,10 +93,14 @@
   };
 
   function sessionWarnings(session) {
+    if (isMatchSession(session)) {
+      const isPast = session.date < todayKey();
+      return isPast && !Number(session.performanceRating || 0) ? ["Nevyhodnocený výkon"] : [];
+    }
     const warnings = [];
     const goalIds = [session.mainGoalId, ...(session.extraGoalIds || [])].filter(Boolean);
     const detailIds = session.detailIds || [];
-    const today = dateKey(new Date());
+    const today = todayKey();
     const isPast = session.date < today;
 
     if (!goalIds.length) warnings.push("Chybí cíl");
@@ -113,7 +117,7 @@
   }
 
   sessionCard = function sessionCardWithWarnings(session) {
-    const goal = goalById(session.mainGoalId)?.name || "Bez cíle";
+    const goal = isMatchSession(session) ? performanceLabel(session) : goalById(session.mainGoalId)?.name || "Bez cíle";
     const teamName = state.teams.find((team) => team.id === session.teamId)?.name || "Tým";
     const klass = ["Utkání", "Turnaj"].includes(session.type) ? "match" : "";
     return `<button class="event ${klass} ${session.id === selectedSessionId ? "active" : ""}" data-session="${session.id}" type="button">

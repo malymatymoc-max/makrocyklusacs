@@ -15,6 +15,17 @@ function migratePhaseModel(nextState = state) {
     name: period.phase || period.name || "Období",
     goalIds: [],
   }));
+  next.sessions = (next.sessions || []).map((session) => ["Utkání", "Turnaj"].includes(session.type)
+    ? {
+      ...session,
+      mainGoalId: "",
+      extraGoalIds: [],
+      detailIds: [],
+      goalRatings: {},
+      detailRatings: {},
+      performanceRating: Math.max(0, Number(session.performanceRating || 0)),
+    }
+    : { ...session, performanceRating: Math.max(0, Number(session.performanceRating || 0)) });
   return next;
 }
 
@@ -57,9 +68,11 @@ function renderFulfillment() {
     ? state.goals.map((goal) => goal.id)
     : state.goals.filter((goal) => split(goal.phaseIds).includes(period?.phase)).map((goal) => goal.id);
   const detailIds = [...new Set(goalIds.flatMap((id) => goalById(id)?.detailIds || []))];
+  const matchStats = matchPerformanceStats(scope);
   const cards = [
     ...goalIds.map((id) => circleCard(goalById(id)?.name || "", completion("goal", id), "Cíl TJ")),
     ...detailIds.map((id) => circleCard(detailById(id)?.name || "", completion("detail", id), "Detail")),
+    ...(matchStats.count ? [circleCard("Průměr výkonu", matchStats.average * 10, `${matchStats.count} utkání/turnajů`)] : []),
   ];
   els.fulfillment.innerHTML = cards.length ? cards.join("") : `<div class="muted">Zatím nejsou vytvořené cíle pro vybranou fázi.</div>`;
 }

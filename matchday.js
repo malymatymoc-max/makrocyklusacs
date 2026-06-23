@@ -7,6 +7,7 @@
   let matchdayTicker = 0;
   let liveMode = false;
   let goalPickerOpen = false;
+  let matchdayListMode = "upcoming";
 
   function migrateMatchdays(nextState = state) {
     const next = { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
@@ -79,6 +80,12 @@
   }
 
   function matchSessions() {
+    const today = todayKey();
+    return allMatchSessions()
+      .filter((session) => matchdayListMode === "past" ? session.date < today : session.date >= today);
+  }
+
+  function allMatchSessions() {
     return state.sessions
       .filter((session) => ["Utkání", "Turnaj"].includes(session.type))
       .sort((a, b) => `${a.date} ${a.startTime || ""}`.localeCompare(`${b.date} ${b.startTime || ""}`));
@@ -143,18 +150,25 @@
     const detail = document.querySelector("#matchdayDetail");
     if (!list || !detail) return;
 
+    const allMatches = allMatchSessions();
     const matches = matchSessions();
     const layout = document.querySelector(".matchday-layout");
     layout?.classList.toggle("live-mode", liveMode);
     document.body.classList.toggle("matchday-live-active", liveMode && document.body.dataset.activeView === "matchday");
-    if (!matches.length) {
-      list.innerHTML = `<div class="muted">Zatím není v kalendáři žádné utkání ani turnaj.</div>`;
+    if (!allMatches.length) {
+      list.innerHTML = `<div class="matchday-tabs-panel">${matchdayListTabs(0, 0)}</div><div class="muted">Zatím není v kalendáři žádné utkání ani turnaj.</div>`;
       detail.innerHTML = `<div class="matchday-empty"><p>Vytvoř v kalendáři událost typu Utkání nebo Turnaj a potom ji otevři tady.</p></div>`;
+      bindMatchdayListTabs(list);
       return;
     }
 
-    if (!matches.some((session) => session.id === selectedMatchSessionId)) selectedMatchSessionId = matches[0].id;
-    list.innerHTML = matches.map((session) => matchCard(session)).join("");
+    if (!matches.some((session) => session.id === selectedMatchSessionId)) selectedMatchSessionId = matches[0]?.id || "";
+    const upcomingCount = allMatches.filter((session) => session.date >= todayKey()).length;
+    const pastCount = allMatches.length - upcomingCount;
+    list.innerHTML = `<div class="matchday-tabs-panel">${matchdayListTabs(upcomingCount, pastCount)}</div>${
+      matches.length ? matches.map((session) => matchCard(session)).join("") : `<div class="muted">${matchdayListMode === "past" ? "Zatím tu nejsou žádná odehraná utkání." : "Zatím tu nejsou žádná nadcházející utkání."}</div>`
+    }`;
+    bindMatchdayListTabs(list);
     list.querySelectorAll("[data-match-session]").forEach((button) => {
       button.addEventListener("click", () => {
         selectedMatchSessionId = button.dataset.matchSession;
@@ -169,6 +183,26 @@
     });
 
     renderMatchDetail(sessionById(selectedMatchSessionId), detail);
+  }
+
+  function matchdayListTabs(upcomingCount, pastCount) {
+    return `<div class="matchday-list-tabs">
+      <button class="${matchdayListMode === "upcoming" ? "active" : ""}" data-matchday-list-mode="upcoming" type="button">Nadcházející <span>${upcomingCount}</span></button>
+      <button class="${matchdayListMode === "past" ? "active" : ""}" data-matchday-list-mode="past" type="button">Odehrané <span>${pastCount}</span></button>
+    </div>`;
+  }
+
+  function bindMatchdayListTabs(host) {
+    host.querySelectorAll("[data-matchday-list-mode]").forEach((button) => {
+      button.addEventListener("click", () => {
+        matchdayListMode = button.dataset.matchdayListMode;
+        selectedMatchSessionId = "";
+        selectedMatchdayId = "";
+        liveMode = false;
+        goalPickerOpen = false;
+        renderMatchday();
+      });
+    });
   }
 
   function matchCard(session) {
@@ -223,6 +257,7 @@
           </div>
         </div>
         ${dashboardSwitcher(session, dashboards, matchday)}
+        ${matchPerformancePanel(session)}
         <div class="matchday-grid">
           <div class="match-settings">
             ${matchSettings(matchday, session)}
@@ -237,6 +272,22 @@
     `;
 
     bindMatchdayDetail(host, matchday, session, players);
+  }
+
+  function matchPerformancePanel(session) {
+    const value = Number(session.performanceRating || 0);
+    return `<section class="match-performance-panel">
+      <div>
+        <strong>Hodnocení výkonu</strong>
+        <span>${value ? `${value}/10` : "Zatím bez hodnocení"}</span>
+      </div>
+      <div class="match-performance-buttons">
+        ${Array.from({ length: 10 }, (_, index) => {
+          const rating = index + 1;
+          return `<button class="${value === rating ? "active" : ""}" data-session-performance-rate="${rating}" type="button">${rating}</button>`;
+        }).join("")}
+      </div>
+    </section>`;
   }
 
   function dashboardSwitcher(session, dashboards, activeMatchday) {
@@ -348,6 +399,15 @@
       });
     });
     host.querySelector("[data-add-dashboard]")?.addEventListener("click", () => createMatchdayDashboard(session));
+    host.querySelectorAll("[data-session-performance-rate]").forEach((button) => {
+      button.addEventListener("click", () => {
+        session.performanceRating = Number(button.dataset.sessionPerformanceRate);
+        save();
+        renderMatchday();
+        renderStats();
+        renderFulfillment();
+      });
+    });
     host.querySelectorAll("[data-live-mode]").forEach((button) => {
       button.addEventListener("click", () => {
         liveMode = button.dataset.liveMode === "open";

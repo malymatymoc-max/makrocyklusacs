@@ -206,7 +206,7 @@ function renderMonth() {
 }
 
 function sessionCard(s) {
-  const goal = goalById(s.mainGoalId)?.name || "Bez cíle";
+  const goal = isMatchSession(s) ? performanceLabel(s) : goalById(s.mainGoalId)?.name || "Bez cíle";
   const klass = ["Utkání", "Turnaj"].includes(s.type) ? "match" : "";
   return `<button class="event ${klass} ${s.id === selectedSessionId ? "active" : ""}" data-session="${s.id}" type="button">
     <strong>${esc(s.startTime || "")} ${esc(s.type)}</strong>
@@ -241,6 +241,7 @@ function renderEditor() {
   els.form.elements.place.value = s.place || "";
   els.form.elements.coach.value = s.coach || "";
   els.form.elements.note.value = s.note || "";
+  if (isMatchSession(s)) clearMacrocycleFields(s);
   renderGoalSelect(s);
   renderExtraGoals(s);
   renderDetails(s);
@@ -248,6 +249,13 @@ function renderEditor() {
 }
 
 function renderGoalSelect(s) {
+  if (isMatchSession(s)) {
+    els.mainGoal.innerHTML = `<option value="">Utkání/turnaj nemá cíl TJ</option>`;
+    els.mainGoal.value = "";
+    els.mainGoal.disabled = true;
+    return;
+  }
+  els.mainGoal.disabled = false;
   const suggested = suggestedGoalsForSession(s);
   const other = state.goals.filter((g) => !suggested.some((x) => x.id === g.id));
   els.mainGoal.innerHTML = `<option value="">Vyber hlavní cíl</option>
@@ -257,6 +265,10 @@ function renderGoalSelect(s) {
 }
 
 function renderExtraGoals(s) {
+  if (isMatchSession(s)) {
+    els.extraGoals.innerHTML = `<div class="muted">Utkání a turnaje se nepočítají do cílů makrocyklu.</div>`;
+    return;
+  }
   els.extraGoals.innerHTML = state.goals.length ? state.goals
     .filter((g) => g.id !== s.mainGoalId)
     .map((g) => chip(g, s.extraGoalIds.includes(g.id), "extra-goal"))
@@ -265,6 +277,10 @@ function renderExtraGoals(s) {
 }
 
 function renderDetails(s) {
+  if (isMatchSession(s)) {
+    els.details.innerHTML = `<div class="muted">Detaily TJ se u utkání a turnajů nevybírají.</div>`;
+    return;
+  }
   const suggested = suggestedDetailsForSession(s);
   const other = state.details.filter((d) => !suggested.some((x) => x.id === d.id));
   const html = [
@@ -276,6 +292,14 @@ function renderDetails(s) {
 }
 
 function renderRatings(s) {
+  if (isMatchSession(s)) {
+    els.ratings.innerHTML = `<div class="rating-row match-performance-row"><strong>Hodnocení výkonu</strong>${Array.from({ length: 10 }, (_, i) => {
+      const n = i + 1;
+      return `<button class="${Number(s.performanceRating || 0) === n ? "active" : ""}" data-performance-rate="${n}" type="button">${n}</button>`;
+    }).join("")}</div>`;
+    $$("[data-performance-rate]").forEach((btn) => btn.addEventListener("click", () => setPerformanceRating(Number(btn.dataset.performanceRate))));
+    return;
+  }
   const goalIds = [s.mainGoalId, ...s.extraGoalIds].filter(Boolean);
   const detailIds = s.detailIds;
   const goalRows = goalIds.map((id) => ratingRow("goal", id, goalById(id)?.name || "", s.goalRatings[id] || 0)).join("");
@@ -293,11 +317,12 @@ function ratingRow(kind, id, name, value) {
 
 function renderStats() {
   const p = progress();
+  const matchStats = matchPerformanceStats();
   els.stats.innerHTML = [
     stat("Cíle", `${p.doneGoals}/${p.totalGoals}`, p.totalGoals ? p.doneGoals / p.totalGoals : 0),
     stat("Detaily", `${p.doneDetails}/${p.totalDetails}`, p.totalDetails ? p.doneDetails / p.totalDetails : 0),
-    stat("TJ v sezoně", sessions().length, sessions().length ? sessions().filter((s) => hasRatings(s)).length / sessions().length : 0),
-    stat("Období", periods().length, periods().length ? p.periodsWithTraining / periods().length : 0),
+    stat("TJ v sezoně", macroSessions().length, macroSessions().length ? macroSessions().filter((s) => hasRatings(s)).length / macroSessions().length : 0),
+    stat("Výkon utkání", matchStats.count ? `${matchStats.average.toFixed(1)}/10` : "0/10", matchStats.count ? matchStats.average / 10 : 0),
   ].join("");
 }
 
@@ -312,11 +337,13 @@ function renderFulfillmentScope() {
 
 function renderFulfillment() {
   const scope = els.scope.value || "season";
-  const goalIds = scope === "season" ? [...new Set(periods().flatMap((p) => p.goalIds))] : periodById(scope)?.goalIds || [];
+  const goalIds = scope === "season" ? state.goals.map((g) => g.id) : periodById(scope)?.goalIds || [];
   const detailIds = [...new Set(goalIds.flatMap((id) => goalById(id)?.detailIds || []))];
+  const matchStats = matchPerformanceStats(scope);
   const cards = [
     ...goalIds.map((id) => circleCard(goalById(id)?.name || "", completion("goal", id), "Cíl TJ")),
     ...detailIds.map((id) => circleCard(detailById(id)?.name || "", completion("detail", id), "Detail")),
+    ...(matchStats.count ? [circleCard("Průměr výkonu", matchStats.average * 10, `${matchStats.count} utkání/turnajů`)] : []),
   ];
   els.fulfillment.innerHTML = cards.length ? cards.join("") : `<div class="muted">Zatím nejsou přiřazené cíle ani detaily.</div>`;
 }
@@ -347,6 +374,7 @@ function updateSession(event) {
   const s = selectedSession();
   if (!s || !event.target.name) return;
   s[event.target.name] = event.target.value;
+  if (event.target.name === "type" && isMatchSession(s)) clearMacrocycleFields(s);
   if (event.target.name === "date") {
     weekStart = monday(new Date(`${s.date}T12:00:00`));
     s.periodId = periodForDate(s.date)?.id || "";
@@ -377,8 +405,17 @@ function toggleSessionArray(key, id) {
 
 function setRating(kind, id, value) {
   const s = selectedSession();
+  if (!s || isMatchSession(s)) return;
   const key = kind === "goal" ? "goalRatings" : "detailRatings";
   s[key][id] = value;
+  save();
+  render();
+}
+
+function setPerformanceRating(value) {
+  const s = selectedSession();
+  if (!s || !isMatchSession(s)) return;
+  s.performanceRating = value;
   save();
   render();
 }
@@ -447,6 +484,7 @@ function makeSession(data) {
     detailIds: [],
     goalRatings: {},
     detailRatings: {},
+    performanceRating: 0,
     repeatGroupId: data.repeatGroupId || "",
   };
 }
@@ -582,7 +620,7 @@ function suggestedDetailsForSession(s) {
 }
 
 function progress() {
-  const goalIds = new Set(periods().flatMap((p) => p.goalIds));
+  const goalIds = new Set(state.goals.map((g) => g.id));
   const detailIds = new Set([...goalIds].flatMap((id) => goalById(id)?.detailIds || []));
   return {
     totalGoals: goalIds.size,
@@ -595,14 +633,44 @@ function progress() {
 
 function completion(kind, id) {
   const key = kind === "goal" ? "goalRatings" : "detailRatings";
-  return sessions().reduce((current, s) => {
+  return macroSessions().reduce((current, s) => {
     const rating = Number(s[key]?.[id] || 0);
     return rating ? current + (100 - current) * (rating / 10) : current;
   }, 0);
 }
 
 function hasRatings(s) {
+  if (isMatchSession(s)) return Number(s.performanceRating || 0) > 0;
   return Object.values(s.goalRatings).some(Boolean) || Object.values(s.detailRatings).some(Boolean);
+}
+
+function isMatchSession(session) {
+  return ["Utkání", "Turnaj"].includes(session?.type);
+}
+function macroSessions() {
+  return sessions().filter((session) => !isMatchSession(session));
+}
+function clearMacrocycleFields(session) {
+  session.mainGoalId = "";
+  session.extraGoalIds = [];
+  session.detailIds = [];
+  session.goalRatings = {};
+  session.detailRatings = {};
+}
+function performanceLabel(session) {
+  const rating = Number(session.performanceRating || 0);
+  return rating ? `Výkon ${rating}/10` : "Bez hodnocení výkonu";
+}
+function matchPerformanceStats(scope = "season") {
+  const source = scope === "season"
+    ? sessions()
+    : sessions().filter((session) => session.periodId === scope || periodForDate(session.date)?.id === scope);
+  const values = source
+    .filter(isMatchSession)
+    .map((session) => Number(session.performanceRating || 0))
+    .filter((rating) => rating > 0);
+  const average = values.length ? values.reduce((sum, rating) => sum + rating, 0) / values.length : 0;
+  return { count: values.length, average };
 }
 
 function input(name, label, value = "", type = "text") {
@@ -790,12 +858,30 @@ function supabaseHeaders() {
   };
 }
 function normalizeState(nextState) {
-  return { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
+  const next = { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
+  next.sessions = (next.sessions || []).map((session) => ["Utkání", "Turnaj"].includes(session.type)
+    ? {
+      ...session,
+      mainGoalId: "",
+      extraGoalIds: [],
+      detailIds: [],
+      goalRatings: {},
+      detailRatings: {},
+      performanceRating: Math.max(0, Number(session.performanceRating || 0)),
+    }
+    : { ...session, performanceRating: Math.max(0, Number(session.performanceRating || 0)) });
+  return next;
 }
 function split(value) { return Array.isArray(value) ? value.filter(Boolean) : value ? String(value).split(",").filter(Boolean) : []; }
 function monday(date) { const d = new Date(date); const day = d.getDay() || 7; d.setDate(d.getDate() - day + 1); d.setHours(12,0,0,0); return d; }
 function addDays(date, days) { const d = new Date(date); d.setDate(d.getDate() + days); return d; }
 function dateKey(date) { return date.toISOString().slice(0, 10); }
+function todayKey() {
+  const date = new Date();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
 function firstOfMonth(date) { const d = new Date(date); d.setDate(1); d.setHours(12,0,0,0); return d; }
 function addMonths(date, months) { const d = new Date(date); d.setMonth(d.getMonth() + months, 1); d.setHours(12,0,0,0); return d; }
 function weekday(date) { return new Intl.DateTimeFormat("cs-CZ", { weekday: "short" }).format(date); }
