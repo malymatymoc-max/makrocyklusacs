@@ -1,6 +1,6 @@
 {
-  "name": "Makrocyklus WU9",
-  "short_name": "Makrocyklus",
+  "name": "Coach ACS",
+  "short_name": "Coach ACS",
   "description": "Plánování makrocyklu, tréninkových jednotek a herních prvků hráček.",
   "start_url": "./index.html",
   "display": "standalone",
