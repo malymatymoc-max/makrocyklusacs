@@ -9,7 +9,7 @@
     <title>Makrocyklus</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=144" />
+    <link rel="stylesheet" href="./styles.css?v=145" />
     <style>
       .topbar { grid-template-columns: minmax(260px, 1.4fr) minmax(160px, .8fr) auto auto; }
       .team-picker-label { min-width: 0; }
@@ -52,7 +52,7 @@
         </nav>
         <div class="quick-actions">
           <strong>Rychlé akce</strong>
-          <button id="quickSession" type="button">+ Nová TJ</button>
+          <button id="quickSession" type="button">+ Nová událost</button>
           <button id="quickPeriod" type="button">Nové období</button>
         </div>
       </aside>
@@ -63,7 +63,7 @@
           <label>Sezóna<select id="seasonSelect"></select></label>
           <label style="display: none">Období / fáze<select id="periodSelect"></select></label>
           <span id="syncStatus" class="sync-status">Lokální režim</span>
-          <button id="newSession" class="primary" type="button">+ Nová TJ</button>
+          <button id="newSession" class="primary" type="button">+ Nová událost</button>
         </header>
 
         <section id="calendarView" class="view active">
@@ -151,7 +151,7 @@
 
     <dialog id="newSessionDialog">
       <form id="newSessionForm">
-        <div class="dialog-head"><h2>Nová TJ / událost</h2><button id="newSessionClose" type="button">×</button></div>
+        <div class="dialog-head"><h2>Nová událost</h2><button id="newSessionClose" type="button">×</button></div>
         <div class="dialog-body">
           <div class="form-row">
             <label>Kategorie<select name="teamId" required></select></label>
@@ -183,7 +183,7 @@
     </dialog>
 
     <dialog id="sessionDialog">
-      <div class="dialog-head"><div><h2>TJ detail</h2><p id="editorHint">Vyber nebo vytvoř trénink.</p></div><button id="sessionClose" type="button">×</button></div>
+      <div class="dialog-head"><div><h2 id="sessionDialogTitle">Detail události</h2><p id="editorHint">Vyber nebo vytvoř událost.</p></div><button id="sessionClose" type="button">×</button></div>
       <form id="sessionForm" class="editor-form">
         <div class="form-row">
           <label>Datum<input name="date" type="date" /></label>
@@ -199,45 +199,45 @@
         </div>
         <label>Poznámka<textarea name="note" rows="2"></textarea></label>
 
-        <div class="chooser-block">
+        <div class="chooser-block macrocycle-field">
           <div class="chooser-title"><strong>Hlavní cíl TJ</strong><button data-create="goal" type="button">+ Cíl</button></div>
           <select id="mainGoalSelect"></select>
         </div>
 
-        <div class="chooser-block">
+        <div class="chooser-block macrocycle-field">
           <div class="chooser-title"><strong>Další cíle</strong></div>
           <div id="extraGoalChips" class="chips"></div>
         </div>
 
-        <div class="chooser-block">
+        <div class="chooser-block macrocycle-field">
           <div class="chooser-title"><strong>Detaily TJ</strong><button data-create="detail" type="button">+ Detail</button></div>
           <div id="detailChips" class="chips"></div>
         </div>
 
         <div class="rating-block">
-          <h3>Hodnocení po TJ</h3>
+          <h3 id="ratingBlockTitle">Hodnocení</h3>
           <div id="ratings"></div>
         </div>
       </form>
       <div class="dialog-actions">
-        <button id="deleteSession" class="danger" type="button">Smazat tuto TJ</button>
+        <button id="deleteSession" class="danger" type="button">Smazat událost</button>
         <button id="deleteSeries" class="danger subtle-danger" type="button">Smazat celé opakování</button>
         <span></span>
         <button id="sessionDone" class="primary" type="button">Hotovo</button>
       </div>
     </dialog>
 
-    <script src="./config.js?v=144"></script>
-    <script src="./app.js?v=144"></script>
-    <script src="./progress-fix.js?v=144"></script>
-    <script src="./phase-model.js?v=144"></script>
-    <script src="./team-scope.js?v=144"></script>
-    <script src="./calendar-teams.js?v=144"></script>
-    <script src="./training-requirements.js?v=144"></script>
-    <script src="./team-colors.js?v=144"></script>
-    <script src="./players.js?v=144"></script>
-    <script src="./matchday.js?v=144"></script>
-    <script src="./local-ui-state.js?v=144"></script>
-    <script src="./sync-diagnostics.js?v=144"></script>
+    <script src="./config.js?v=145"></script>
+    <script src="./app.js?v=145"></script>
+    <script src="./progress-fix.js?v=145"></script>
+    <script src="./phase-model.js?v=145"></script>
+    <script src="./team-scope.js?v=145"></script>
+    <script src="./calendar-teams.js?v=145"></script>
+    <script src="./training-requirements.js?v=145"></script>
+    <script src="./team-colors.js?v=145"></script>
+    <script src="./players.js?v=145"></script>
+    <script src="./matchday.js?v=145"></script>
+    <script src="./local-ui-state.js?v=145"></script>
+    <script src="./sync-diagnostics.js?v=145"></script>
   </body>
 </html>

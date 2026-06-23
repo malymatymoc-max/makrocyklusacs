@@ -35,6 +35,8 @@ const els = {
   extraGoals: $("#extraGoalChips"),
   details: $("#detailChips"),
   ratings: $("#ratings"),
+  sessionTitle: $("#sessionDialogTitle"),
+  ratingTitle: $("#ratingBlockTitle"),
   stats: $("#progressStrip"),
   syncStatus: $("#syncStatus"),
   scope: $("#fulfillmentScope"),
@@ -223,15 +225,17 @@ function renderEditor() {
     if (!el.dataset.create) el.disabled = !s;
   });
   if (!s) {
-    els.hint.textContent = state.selectedTeamId && state.selectedSeasonId ? "Vyber TJ v kalendáři nebo vytvoř novou." : "Nejdřív vytvoř tým a sezonu.";
+    updateSessionDialogLabels(null);
+    els.hint.textContent = state.selectedTeamId && state.selectedSeasonId ? "Vyber událost v kalendáři nebo vytvoř novou." : "Nejdřív vytvoř tým a sezonu.";
     els.form.reset();
     els.form.elements.type.innerHTML = TYPES.map((t) => `<option>${t}</option>`).join("");
-    els.mainGoal.innerHTML = `<option>Bez TJ</option>`;
-    els.extraGoals.innerHTML = `<div class="muted">Vyber TJ.</div>`;
-    els.details.innerHTML = `<div class="muted">Vyber TJ.</div>`;
-    els.ratings.innerHTML = `<div class="muted">Vyber TJ.</div>`;
+    els.mainGoal.innerHTML = `<option>Bez události</option>`;
+    els.extraGoals.innerHTML = `<div class="muted">Vyber událost.</div>`;
+    els.details.innerHTML = `<div class="muted">Vyber událost.</div>`;
+    els.ratings.innerHTML = `<div class="muted">Vyber událost.</div>`;
     return;
   }
+  updateSessionDialogLabels(s);
   els.hint.textContent = long(new Date(`${s.date}T12:00:00`));
   els.form.elements.date.value = s.date;
   els.form.elements.type.innerHTML = TYPES.map((t) => `<option>${t}</option>`).join("");
@@ -250,7 +254,7 @@ function renderEditor() {
 
 function renderGoalSelect(s) {
   if (isMatchSession(s)) {
-    els.mainGoal.innerHTML = `<option value="">Utkání/turnaj nemá cíl TJ</option>`;
+    els.mainGoal.innerHTML = "";
     els.mainGoal.value = "";
     els.mainGoal.disabled = true;
     return;
@@ -266,7 +270,7 @@ function renderGoalSelect(s) {
 
 function renderExtraGoals(s) {
   if (isMatchSession(s)) {
-    els.extraGoals.innerHTML = `<div class="muted">Utkání a turnaje se nepočítají do cílů makrocyklu.</div>`;
+    els.extraGoals.innerHTML = "";
     return;
   }
   els.extraGoals.innerHTML = state.goals.length ? state.goals
@@ -278,7 +282,7 @@ function renderExtraGoals(s) {
 
 function renderDetails(s) {
   if (isMatchSession(s)) {
-    els.details.innerHTML = `<div class="muted">Detaily TJ se u utkání a turnajů nevybírají.</div>`;
+    els.details.innerHTML = "";
     return;
   }
   const suggested = suggestedDetailsForSession(s);
@@ -306,6 +310,17 @@ function renderRatings(s) {
   const detailRows = detailIds.map((id) => ratingRow("detail", id, detailById(id)?.name || "", s.detailRatings[id] || 0)).join("");
   els.ratings.innerHTML = `${goalRows || `<div class="muted">Bez cíle k hodnocení.</div>`}${detailRows || ""}`;
   $$("[data-rate]").forEach((btn) => btn.addEventListener("click", () => setRating(btn.dataset.kind, btn.dataset.id, Number(btn.dataset.rate))));
+}
+
+function updateSessionDialogLabels(session) {
+  const type = session?.type || "";
+  const isMatch = isMatchSession(session);
+  const title = type === "Utkání" ? "Detail utkání" : type === "Turnaj" ? "Detail turnaje" : type ? "Detail tréninku" : "Detail události";
+  if (els.sessionTitle) els.sessionTitle.textContent = title;
+  if (els.ratingTitle) els.ratingTitle.textContent = isMatch ? "Hodnocení výkonu" : "Hodnocení po TJ";
+  $("#deleteSession").textContent = isMatch ? `Smazat ${type.toLowerCase()}` : type ? "Smazat trénink" : "Smazat událost";
+  els.deleteSeries.textContent = isMatch ? "Smazat celé opakování události" : "Smazat celé opakování";
+  document.querySelectorAll(".macrocycle-field").forEach((block) => block.classList.toggle("hidden", isMatch));
 }
 
 function ratingRow(kind, id, name, value) {
@@ -374,7 +389,12 @@ function updateSession(event) {
   const s = selectedSession();
   if (!s || !event.target.name) return;
   s[event.target.name] = event.target.value;
-  if (event.target.name === "type" && isMatchSession(s)) clearMacrocycleFields(s);
+  if (event.target.name === "type") {
+    if (isMatchSession(s)) clearMacrocycleFields(s);
+    save();
+    render();
+    return;
+  }
   if (event.target.name === "date") {
     weekStart = monday(new Date(`${s.date}T12:00:00`));
     s.periodId = periodForDate(s.date)?.id || "";
