@@ -1,6 +1,7 @@
 (function () {
   const MATCH_FORMATS = ["2+0", "3+0", "3+1", "4+1", "5+1"];
   let selectedMatchSessionId = "";
+  let selectedMatchdayId = "";
   let selectedSlotIndex = -1;
   let selectedBenchIndex = -1;
   let matchdayTicker = 0;
@@ -24,6 +25,7 @@
       id: matchday.id || uid("matchday"),
       sessionId: matchday.sessionId || "",
       teamId: matchday.teamId || "",
+      dashboardName: matchday.dashboardName || "",
       opponent: matchday.opponent || "",
       format,
       partsCount: Math.max(1, Number(matchday.partsCount || 2)),
@@ -71,17 +73,56 @@
 
   function matchdayForSession(session) {
     if (!session) return null;
-    let matchday = state.matchdays.find((item) => item.sessionId === session.id);
+    let matchday = selectedMatchdayId ? state.matchdays.find((item) => item.id === selectedMatchdayId && item.sessionId === session.id) : null;
+    if (!matchday) matchday = state.matchdays.find((item) => item.sessionId === session.id);
     if (!matchday) {
       matchday = normalizeMatchday({
         id: uid("matchday"),
         sessionId: session.id,
         teamId: session.teamId,
+        dashboardName: defaultDashboardName(session, 1),
         opponent: "",
       });
       state.matchdays.push(matchday);
     }
+    selectedMatchdayId = matchday.id;
     return matchday;
+  }
+
+  function matchdaysForSession(session) {
+    if (!session) return [];
+    matchdayForSession(session);
+    return state.matchdays.filter((item) => item.sessionId === session.id);
+  }
+
+  function createMatchdayDashboard(session) {
+    const existing = matchdaysForSession(session);
+    const source = existing[0] || {};
+    const matchday = normalizeMatchday({
+      id: uid("matchday"),
+      sessionId: session.id,
+      teamId: session.teamId,
+      dashboardName: defaultDashboardName(session, existing.length + 1),
+      opponent: source.opponent || "",
+      tournamentName: source.tournamentName || "",
+      tournamentOpponents: source.tournamentOpponents || [],
+      format: source.format || "4+1",
+      partsCount: source.partsCount || 2,
+      partMinutes: source.partMinutes || 12,
+      warningMinutes: source.warningMinutes || 4,
+      currentGame: source.currentGame || 1,
+    });
+    state.matchdays.push(matchday);
+    selectedMatchdayId = matchday.id;
+    clearRosterSelection();
+    goalPickerOpen = false;
+    save();
+    renderMatchday();
+  }
+
+  function defaultDashboardName(session, index) {
+    const teamItem = state.teams.find((item) => item.id === session?.teamId);
+    return index === 1 ? (teamItem?.name || "Tým") : `${teamItem?.name || "Tým"} ${index}`;
   }
 
   function renderMatchday() {
@@ -104,6 +145,7 @@
     list.querySelectorAll("[data-match-session]").forEach((button) => {
       button.addEventListener("click", () => {
         selectedMatchSessionId = button.dataset.matchSession;
+        selectedMatchdayId = "";
         selectedSlotIndex = -1;
         selectedBenchIndex = -1;
         liveMode = false;
@@ -118,12 +160,13 @@
 
   function matchCard(session) {
     const teamItem = state.teams.find((item) => item.id === session.teamId);
-    const matchday = state.matchdays.find((item) => item.sessionId === session.id);
+    const dashboards = state.matchdays.filter((item) => item.sessionId === session.id);
+    const matchday = dashboards[0];
     const opponent = session.type === "Turnaj" ? (matchday?.tournamentName || "Turnaj není nastavený") : (matchday?.opponent || "Soupeř není nastavený");
     return `<button class="match-card ${session.id === selectedMatchSessionId ? "active" : ""}" style="--team-color:${esc(teamItem?.color || "#d28a16")}" data-match-session="${session.id}" type="button">
       <strong>${esc(teamItem?.name || "Tým")} · ${esc(opponent)}</strong>
       <span>${fmtFullDate(session.date)}${session.startTime ? ` · ${esc(session.startTime)}` : ""}</span>
-      <span>${esc(session.place || "Bez místa")}</span>
+      <span>${esc(session.place || "Bez místa")}${dashboards.length > 1 ? ` · ${dashboards.length} týmy` : ""}</span>
     </button>`;
   }
 
@@ -134,10 +177,12 @@
     }
 
     const matchday = matchdayForSession(session);
+    const dashboards = matchdaysForSession(session);
     const teamItem = state.teams.find((item) => item.id === session.teamId);
     const players = window.playersForTeam ? window.playersForTeam(session.teamId) : (state.players || []).filter((player) => player.teamId === session.teamId);
     const positions = formationPositions(matchday.format);
     const opponentLabel = activeOpponent(matchday, session);
+    const displayTeamName = matchday.dashboardName || teamItem?.name || "Tým";
     syncTimer(matchday);
     if (matchday.timerRunning) startTicker();
     if (matchday.fieldPlayerIds.length !== positions.length) {
@@ -156,7 +201,7 @@
       <div class="matchday-dashboard">
         <div class="matchday-header">
           <div>
-            <h2>${esc(teamItem?.name || "Tým")} vs ${esc(opponentLabel)}</h2>
+            <h2>${esc(displayTeamName)} vs ${esc(opponentLabel)}</h2>
             <p>${fmtFullDate(session.date)}${session.startTime ? ` · ${esc(session.startTime)}` : ""}${session.place ? ` · ${esc(session.place)}` : ""}</p>
           </div>
           <div class="matchday-header-actions">
@@ -164,6 +209,7 @@
             <button class="secondary" data-open-calendar-session="${session.id}" type="button">Otevřít v kalendáři</button>
           </div>
         </div>
+        ${dashboardSwitcher(session, dashboards, matchday)}
         <div class="matchday-grid">
           <div class="match-settings">
             ${matchSettings(matchday, session)}
@@ -180,10 +226,24 @@
     bindMatchdayDetail(host, matchday, session, players);
   }
 
+  function dashboardSwitcher(session, dashboards, activeMatchday) {
+    return `<section class="dashboard-switcher">
+      <div>
+        <strong>Týmy pro tuto událost</strong>
+        <span>${dashboards.length} dashboard${dashboards.length === 1 ? "" : "y"}</span>
+      </div>
+      <div class="dashboard-tabs">
+        ${dashboards.map((item, index) => `<button class="${item.id === activeMatchday.id ? "active" : ""}" data-matchday-dashboard="${item.id}" type="button">${esc(item.dashboardName || defaultDashboardName(session, index + 1))}</button>`).join("")}
+        <button class="add-dashboard" data-add-dashboard type="button">+ tým</button>
+      </div>
+    </section>`;
+  }
+
   function matchSettings(matchday, session) {
     if (session?.type === "Turnaj") {
       return `<section class="chooser-block">
         <div class="chooser-title"><strong>Nastavení turnaje</strong></div>
+        <label>Název týmu v události<input name="dashboardName" value="${esc(matchday.dashboardName)}" placeholder="Např. WU9 bílá" /></label>
         <label>Název turnaje<input name="tournamentName" value="${esc(matchday.tournamentName)}" placeholder="Např. Turnaj ABC Braník" /></label>
         <label>Soupeři<textarea name="tournamentOpponents" rows="4" placeholder="Každý soupeř na nový řádek">${esc(matchday.tournamentOpponents.join("\n"))}</textarea></label>
         <div class="form-row">
@@ -198,6 +258,7 @@
     }
     return `<section class="chooser-block">
       <div class="chooser-title"><strong>Nastavení utkání</strong></div>
+      <label>Název týmu v události<input name="dashboardName" value="${esc(matchday.dashboardName)}" placeholder="Např. WU9 bílá" /></label>
       <label>Soupeř<input name="opponent" value="${esc(matchday.opponent)}" placeholder="Název soupeře" /></label>
       <div class="form-row">
         <label>Formát hry<select name="format">${MATCH_FORMATS.map((format) => `<option ${format === matchday.format ? "selected" : ""}>${format}</option>`).join("")}</select></label>
@@ -260,6 +321,16 @@
   }
 
   function bindMatchdayDetail(host, matchday, session, players) {
+    host.querySelectorAll("[data-matchday-dashboard]").forEach((button) => {
+      button.addEventListener("click", () => {
+        selectedMatchdayId = button.dataset.matchdayDashboard;
+        clearRosterSelection();
+        goalPickerOpen = false;
+        liveMode = false;
+        renderMatchday();
+      });
+    });
+    host.querySelector("[data-add-dashboard]")?.addEventListener("click", () => createMatchdayDashboard(session));
     host.querySelectorAll("[data-live-mode]").forEach((button) => {
       button.addEventListener("click", () => {
         liveMode = button.dataset.liveMode === "open";
@@ -423,19 +494,20 @@
     const benchCount = matchday.benchPlayerIds.filter(Boolean).length;
     const opponent = activeOpponent(matchday, session);
     const totalGames = Math.max(1, matchday.tournamentOpponents.length || 1);
+    const displayTeamName = matchday.dashboardName || teamItem?.name || "Tým";
     return `<div class="match-live-screen">
       <div class="match-live-toolbar">
         <button class="secondary live-back" data-live-mode="close" type="button">← Příprava</button>
         <div class="live-match-title">
-          <h1>${esc(teamItem?.name || "Tým")} vs ${esc(opponent)}</h1>
-          <p>${fmtFullDate(session.date)}${session.startTime ? ` · ${esc(session.startTime)}` : ""}${session.place ? ` · ${esc(session.place)}` : ""}</p>
+          <h1>${esc(displayTeamName)} vs ${esc(opponent)}</h1>
+          <p>${esc(session.type)} · ${fmtFullDate(session.date)}${session.startTime ? ` · ${esc(session.startTime)}` : ""}${session.place ? ` · ${esc(session.place)}` : ""}</p>
         </div>
         <button class="secondary live-report-button" data-export-report type="button">Export PDF</button>
       </div>
 
       <div class="match-live-controls">
         <section class="live-control-card live-score-card">
-          <div><small>${esc(teamItem?.name || "My")}</small><strong>${score.own}</strong></div>
+          <div><small>${esc(displayTeamName)}</small><strong>${score.own}</strong></div>
           <span>:</span>
           <div><small>${esc(opponent)}</small><strong>${score.opponent}</strong></div>
         </section>
@@ -458,7 +530,7 @@
         </section>
         <section class="live-control-card live-goals-card">
           <span>Góly</span>
-          <button class="primary live-goal-button" data-open-goal-picker type="button" ${roster.length ? "" : "disabled"}>Gól ${esc(teamItem?.name || "tým")}</button>
+          <button class="primary live-goal-button" data-open-goal-picker type="button" ${roster.length ? "" : "disabled"}>Gól ${esc(displayTeamName)}</button>
           <button class="danger subtle-danger live-goal-button" data-goal-side="opponent" type="button">Gól ${esc(opponent)}</button>
         </section>
       </div>
@@ -485,15 +557,15 @@
           </div>
         </section>
       </div>
-      ${goalPickerOpen ? goalPicker(matchday, teamItem, players) : ""}
+      ${goalPickerOpen ? goalPicker(matchday, displayTeamName, players) : ""}
     </div>`;
   }
 
-  function goalPicker(matchday, teamItem, players) {
+  function goalPicker(matchday, displayTeamName, players) {
     const roster = selectedRoster(matchday, players);
     return `<div class="goal-picker-backdrop">
       <section class="goal-picker-modal">
-        <div class="chooser-title"><strong>Kdo dal gól ${esc(teamItem?.name || "náš tým")}?</strong><button data-close-goal-picker type="button">×</button></div>
+        <div class="chooser-title"><strong>Kdo dal gól ${esc(displayTeamName || "náš tým")}?</strong><button data-close-goal-picker type="button">×</button></div>
         <div class="goal-picker-list">
           ${roster.map((player) => `<button class="goal-player-button" data-goal-side="own" data-goal-player="${player.id}" type="button"><span class="bench-circle">${playerPhoto(player)}</span><strong>${esc(displayPlayerName(player))}</strong></button>`).join("")}
           <button class="goal-player-button" data-goal-side="own" data-own-goal="true" type="button"><span class="bench-circle">VG</span><strong>Vlastní gól soupeře</strong></button>
@@ -588,10 +660,11 @@
 
   function openMatchReport(session, matchday, players) {
     const teamItem = state.teams.find((item) => item.id === session.teamId);
+    const displayTeamName = matchday.dashboardName || teamItem?.name || "Tým";
     const roster = selectedRoster(matchday, players);
     const title = session.type === "Turnaj"
-      ? `${teamItem?.name || "Tým"} · ${matchday.tournamentName || "Turnaj"}`
-      : `${teamItem?.name || "Tým"} vs ${activeOpponent(matchday, session)}`;
+      ? `${displayTeamName} · ${matchday.tournamentName || "Turnaj"}`
+      : `${displayTeamName} vs ${activeOpponent(matchday, session)}`;
     const games = session.type === "Turnaj"
       ? Array.from({ length: Math.max(1, matchday.tournamentOpponents.length || matchday.currentGame || 1) }, (_, index) => index + 1)
       : [1];
@@ -620,7 +693,7 @@
         <section class="score">
           ${games.map((gameIndex) => {
             const score = scoreLine(matchday, gameIndex);
-            return `<div class="card"><div class="muted">${session.type === "Turnaj" ? `${gameIndex}. zápas · ` : ""}${esc(opponentForGame(matchday, session, gameIndex))}</div><div class="result">${score.own}:${score.opponent}</div></div>`;
+            return `<div class="card"><div class="muted">${esc(displayTeamName)}${session.type === "Turnaj" ? ` · ${gameIndex}. zápas` : ""} · ${esc(opponentForGame(matchday, session, gameIndex))}</div><div class="result">${score.own}:${score.opponent}</div></div>`;
           }).join("")}
         </section>
         <h2>Hráčky</h2>
@@ -662,7 +735,9 @@
     if (matchdayTicker) return;
     matchdayTicker = window.setInterval(() => {
       const session = sessionById(selectedMatchSessionId);
-      const matchday = state.matchdays.find((item) => item.sessionId === session?.id);
+      const matchday = selectedMatchdayId
+        ? state.matchdays.find((item) => item.id === selectedMatchdayId && item.sessionId === session?.id)
+        : state.matchdays.find((item) => item.sessionId === session?.id);
       if (!matchday?.timerRunning) {
         window.clearInterval(matchdayTicker);
         matchdayTicker = 0;
