@@ -1,7 +1,9 @@
 const PHASES = ["ÚF na OP", "ÚF na ÚP", "OF na ÚP", "OF na OP"];
 
 function migratePhaseModel(nextState = state) {
-  const next = { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
+  const next = typeof migrateGlobalSeasons === "function"
+    ? migrateGlobalSeasons(nextState)
+    : { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
   next.selectedPeriodId = "all";
   next.goals = (next.goals || []).map((goal) => {
     const phaseIds = new Set(split(goal.phaseIds));
@@ -112,7 +114,7 @@ function saveDialog() {
 
 function normalize(type, data, id) {
   if (type === "team") return { id, name: data.name || "Nový tým" };
-  if (type === "season") return { id, teamId: state.selectedTeamId, name: data.name || "Nová sezona", start: data.start || "", end: data.end || "" };
+  if (type === "season") return { id, name: data.name || "Nová sezona", start: data.start || "", end: data.end || "" };
   if (type === "period") return { id, teamId: state.selectedTeamId, seasonId: state.selectedSeasonId, name: data.phase || "Období", start: data.start || "", end: data.end || "", phase: data.phase || "", goalIds: [] };
   if (type === "goal") return { id, name: data.name || "Nový cíl", phaseIds: split(data.phaseIds), detailIds: split(data.detailIds) };
   if (type === "detail") return { id, name: data.name || "Nový detail" };

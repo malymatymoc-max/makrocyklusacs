@@ -153,7 +153,6 @@ function bind() {
   els.deleteSeries.addEventListener("click", deleteSelectedSeries);
   els.team.addEventListener("change", () => {
     state.selectedTeamId = els.team.value;
-    state.selectedSeasonId = seasons().at(0)?.id || "";
     state.selectedPeriodId = "all";
     selectedSessionId = "";
     save();
@@ -681,7 +680,7 @@ function fields(type, item) {
 
 function normalize(type, data, id) {
   if (type === "team") return { id, name: data.name || "Nový tým" };
-  if (type === "season") return { id, teamId: state.selectedTeamId, name: data.name || "Nová sezona", start: data.start || "", end: data.end || "" };
+  if (type === "season") return { id, name: data.name || "Nová sezona", start: data.start || "", end: data.end || "" };
   if (type === "period") return { id, teamId: state.selectedTeamId, seasonId: state.selectedSeasonId, name: data.name || data.phase || "Období", start: data.start || "", end: data.end || "", phase: data.phase || "", goalIds: split(data.goalIds) };
   if (type === "goal") return { id, name: data.name || "Nový cíl", detailIds: split(data.detailIds) };
   if (type === "detail") return { id, name: data.name || "Nový detail" };
@@ -781,7 +780,7 @@ function entityName(type) { return ({ team: "tým", season: "sezonu", period: "o
 function activeSeason() { return state.seasons.find((s) => s.id === state.selectedSeasonId); }
 function team() { return state.teams.find((t) => t.id === state.selectedTeamId); }
 function season() { return activeSeason(); }
-function seasons() { return state.seasons.filter((s) => s.teamId === state.selectedTeamId); }
+function seasons() { return state.seasons; }
 function periods() { return state.periods.filter((p) => p.teamId === state.selectedTeamId && p.seasonId === state.selectedSeasonId); }
 function sessions() { return state.sessions.filter((s) => s.teamId === state.selectedTeamId && s.seasonId === state.selectedSeasonId); }
 function visibleSessions() { return state.selectedPeriodId === "all" ? sessions() : sessions().filter((s) => s.periodId === state.selectedPeriodId || periodForDate(s.date)?.id === state.selectedPeriodId); }
@@ -792,6 +791,7 @@ function detailById(id) { return state.details.find((d) => d.id === id); }
 function periodById(id) { return state.periods.find((p) => p.id === id); }
 function periodForDate(date) { return periods().find((p) => date >= p.start && date <= p.end); }
 function ensureSelection() {
+  state = migrateGlobalSeasons(state);
   if (!state.selectedTeamId || !state.teams.some((t) => t.id === state.selectedTeamId)) state.selectedTeamId = state.teams[0]?.id || "";
   if (!state.selectedSeasonId || !seasons().some((s) => s.id === state.selectedSeasonId)) state.selectedSeasonId = seasons()[0]?.id || "";
   if (!state.selectedPeriodId) state.selectedPeriodId = "all";
@@ -938,7 +938,7 @@ function supabaseHeaders() {
   };
 }
 function normalizeState(nextState) {
-  const next = { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
+  const next = migrateGlobalSeasons({ ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) });
   next.sessions = (next.sessions || []).map((session) => ["Utkání", "Turnaj"].includes(session.type)
     ? {
       ...session,
@@ -950,6 +950,32 @@ function normalizeState(nextState) {
       performanceRating: Math.max(0, Number(session.performanceRating || 0)),
     }
     : { ...session, performanceRating: Math.max(0, Number(session.performanceRating || 0)) });
+  return next;
+}
+function seasonMergeKey(season) {
+  return [season?.name || "", season?.start || "", season?.end || ""].map((value) => String(value).trim().toLowerCase()).join("|");
+}
+function migrateGlobalSeasons(nextState = state) {
+  const next = { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
+  const seasonIdMap = new Map();
+  const seen = new Map();
+  next.seasons = (next.seasons || []).reduce((items, season) => {
+    const cleaned = { id: season.id || uid("season"), name: season.name || "Nová sezona", start: season.start || "", end: season.end || "" };
+    const key = seasonMergeKey(cleaned);
+    const existing = seen.get(key);
+    if (existing) {
+      seasonIdMap.set(season.id, existing.id);
+      return items;
+    }
+    seen.set(key, cleaned);
+    seasonIdMap.set(season.id, cleaned.id);
+    items.push(cleaned);
+    return items;
+  }, []);
+  const mapSeasonId = (id) => seasonIdMap.get(id) || id || next.seasons[0]?.id || "";
+  next.selectedSeasonId = mapSeasonId(next.selectedSeasonId);
+  next.periods = (next.periods || []).map((period) => ({ ...period, seasonId: mapSeasonId(period.seasonId) }));
+  next.sessions = (next.sessions || []).map((session) => ({ ...session, seasonId: mapSeasonId(session.seasonId) }));
   return next;
 }
 function split(value) { return Array.isArray(value) ? value.filter(Boolean) : value ? String(value).split(",").filter(Boolean) : []; }

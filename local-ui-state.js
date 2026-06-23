@@ -34,8 +34,8 @@
     const ui = readUiState();
     const teamIds = new Set((nextState.teams || []).map((team) => team.id));
     const selectedTeamId = teamIds.has(ui.selectedTeamId) ? ui.selectedTeamId : (nextState.teams || [])[0]?.id || "";
-    const seasonIds = new Set((nextState.seasons || []).filter((season) => season.teamId === selectedTeamId).map((season) => season.id));
-    const selectedSeasonId = seasonIds.has(ui.selectedSeasonId) ? ui.selectedSeasonId : (nextState.seasons || []).find((season) => season.teamId === selectedTeamId)?.id || "";
+    const seasonIds = new Set((nextState.seasons || []).map((season) => season.id));
+    const selectedSeasonId = seasonIds.has(ui.selectedSeasonId) ? ui.selectedSeasonId : (nextState.seasons || [])[0]?.id || "";
     const periodIds = new Set((nextState.periods || []).filter((period) => period.teamId === selectedTeamId && period.seasonId === selectedSeasonId).map((period) => period.id));
     const selectedPeriodId = ui.selectedPeriodId === "all" || periodIds.has(ui.selectedPeriodId) ? (ui.selectedPeriodId || "all") : "all";
     const calendarTeamIds = Array.isArray(ui.calendarTeamIds) ? ui.calendarTeamIds.filter((id) => teamIds.has(id)) : [];

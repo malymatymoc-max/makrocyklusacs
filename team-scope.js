@@ -1,5 +1,7 @@
 function migrateTeamScopedLibrary(nextState = state) {
-  const next = { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
+  const next = typeof migrateGlobalSeasons === "function"
+    ? migrateGlobalSeasons(nextState)
+    : { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
   const fallbackTeamId = next.selectedTeamId || next.teams?.[0]?.id || "";
   next.goals = (next.goals || []).map((goal) => ({ ...goal, teamId: goal.teamId || fallbackTeamId }));
   next.details = (next.details || []).map((detail) => ({ ...detail, teamId: detail.teamId || fallbackTeamId }));
@@ -67,7 +69,7 @@ function fields(type, item) {
 
 function normalize(type, data, id) {
   if (type === "team") return { id, name: data.name || "Nový tým" };
-  if (type === "season") return { id, teamId: state.selectedTeamId, name: data.name || "Nová sezona", start: data.start || "", end: data.end || "" };
+  if (type === "season") return { id, name: data.name || "Nová sezona", start: data.start || "", end: data.end || "" };
   if (type === "period") return { id, teamId: state.selectedTeamId, seasonId: state.selectedSeasonId, name: data.phase || "Období", start: data.start || "", end: data.end || "", phase: data.phase || "", goalIds: [] };
   if (type === "goal") return { id, teamId: state.selectedTeamId, name: data.name || "Nový cíl", phaseIds: split(data.phaseIds), detailIds: split(data.detailIds) };
   if (type === "detail") return { id, teamId: state.selectedTeamId, name: data.name || "Nový detail" };

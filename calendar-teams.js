@@ -1,5 +1,7 @@
 function migrateCalendarTeams(nextState = state) {
-  const next = { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
+  const next = typeof migrateGlobalSeasons === "function"
+    ? migrateGlobalSeasons(nextState)
+    : { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
   const visible = Array.isArray(next.calendarTeamIds) ? next.calendarTeamIds.filter((id) => next.teams.some((team) => team.id === id)) : [];
   next.calendarTeamIds = visible.length ? visible : (next.selectedTeamId ? [next.selectedTeamId] : []);
   return next;
@@ -31,13 +33,13 @@ function sessionCard(s) {
   </button>`;
 }
 
-function seasonOptionsForTeam(teamId) {
-  return state.seasons.filter((season) => season.teamId === teamId);
+function seasonOptionsForTeam() {
+  return state.seasons;
 }
 
-function selectedSeasonForTeam(teamId) {
-  const current = state.seasons.find((season) => season.id === state.selectedSeasonId && season.teamId === teamId);
-  return current?.id || seasonOptionsForTeam(teamId)[0]?.id || "";
+function selectedSeasonForTeam() {
+  const current = state.seasons.find((season) => season.id === state.selectedSeasonId);
+  return current?.id || seasonOptionsForTeam()[0]?.id || "";
 }
 
 function renderHeaderTeamPicker() {
@@ -55,12 +57,10 @@ function renderHeaderTeamPicker() {
     state.calendarTeamIds = checked.length ? checked : [state.selectedTeamId].filter(Boolean);
     if (!state.calendarTeamIds.includes(state.selectedTeamId)) {
       state.selectedTeamId = state.calendarTeamIds[0] || state.teams[0]?.id || "";
-      state.selectedSeasonId = selectedSeasonForTeam(state.selectedTeamId);
       state.selectedPeriodId = "all";
     }
     if (input.checked) {
       state.selectedTeamId = input.value;
-      state.selectedSeasonId = selectedSeasonForTeam(input.value);
       state.selectedPeriodId = "all";
     }
     save();
@@ -124,11 +124,11 @@ renderSelectors = function renderCalendarTeamSelectors() {
   renderHeaderTeamPicker();
 };
 
-function fillNewSessionSeasons(teamId) {
+function fillNewSessionSeasons() {
   const seasonSelect = els.newSessionForm.elements.seasonId;
-  const options = seasonOptionsForTeam(teamId);
+  const options = seasonOptionsForTeam();
   seasonSelect.innerHTML = options.length ? options.map(option).join("") : `<option value="">Nejdřív vytvoř sezonu</option>`;
-  seasonSelect.value = selectedSeasonForTeam(teamId);
+  seasonSelect.value = selectedSeasonForTeam();
 }
 
 function openNewSessionDialog(date) {
@@ -141,8 +141,8 @@ function openNewSessionDialog(date) {
   const teamSelect = els.newSessionForm.elements.teamId;
   teamSelect.innerHTML = state.teams.map(option).join("");
   teamSelect.value = state.selectedTeamId || visibleTeamIds()[0] || state.teams[0]?.id || "";
-  fillNewSessionSeasons(teamSelect.value);
-  teamSelect.onchange = () => fillNewSessionSeasons(teamSelect.value);
+  fillNewSessionSeasons();
+  teamSelect.onchange = () => fillNewSessionSeasons();
   els.newSessionForm.elements.date.value = date;
   els.newSessionForm.elements.type.innerHTML = TYPES.map((type) => `<option>${type}</option>`).join("");
   els.newSessionForm.elements.type.value = "TJ";
