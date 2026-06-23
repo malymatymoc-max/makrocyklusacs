@@ -257,7 +257,6 @@
           </div>
         </div>
         ${dashboardSwitcher(session, dashboards, matchday)}
-        ${matchPerformancePanel(session)}
         <div class="matchday-grid">
           <div class="match-settings">
             ${matchSettings(matchday, session)}
@@ -272,22 +271,6 @@
     `;
 
     bindMatchdayDetail(host, matchday, session, players);
-  }
-
-  function matchPerformancePanel(session) {
-    const value = Number(session.performanceRating || 0);
-    return `<section class="match-performance-panel">
-      <div>
-        <strong>Hodnocení výkonu</strong>
-        <span>${value ? `${value}/10` : "Zatím bez hodnocení"}</span>
-      </div>
-      <div class="match-performance-buttons">
-        ${Array.from({ length: 10 }, (_, index) => {
-          const rating = index + 1;
-          return `<button class="${value === rating ? "active" : ""}" data-session-performance-rate="${rating}" type="button">${rating}</button>`;
-        }).join("")}
-      </div>
-    </section>`;
   }
 
   function dashboardSwitcher(session, dashboards, activeMatchday) {
@@ -399,15 +382,6 @@
       });
     });
     host.querySelector("[data-add-dashboard]")?.addEventListener("click", () => createMatchdayDashboard(session));
-    host.querySelectorAll("[data-session-performance-rate]").forEach((button) => {
-      button.addEventListener("click", () => {
-        session.performanceRating = Number(button.dataset.sessionPerformanceRate);
-        save();
-        renderMatchday();
-        renderStats();
-        renderFulfillment();
-      });
-    });
     host.querySelectorAll("[data-live-mode]").forEach((button) => {
       button.addEventListener("click", () => {
         liveMode = button.dataset.liveMode === "open";
