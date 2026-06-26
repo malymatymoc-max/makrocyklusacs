@@ -9,9 +9,7 @@
       xpsFeeds: Array.isArray(nextState.xpsFeeds) ? nextState.xpsFeeds.map((feed) => ({
         id: feed.id || uid("xps"),
         teamId: feed.teamId || "",
-        seasonId: feed.seasonId || "",
         url: feed.url || "",
-        filterText: feed.filterText || "",
         lastSyncAt: feed.lastSyncAt || "",
         lastResult: feed.lastResult || "",
       })) : [],
@@ -40,19 +38,14 @@
     const panel = document.querySelector("[data-section='xps']");
     if (!panel) return;
     const defaultTeamId = state.selectedTeamId || state.teams[0]?.id || "";
-    const defaultSeasonId = state.selectedSeasonId || state.seasons[0]?.id || "";
     const feed = state.xpsFeeds[0] || {};
     panel.innerHTML = `
       <div class="setup-head">
         <div><h2>XPS iCal import</h2><p>Jednosměrné načtení událostí z XPS/Google kalendáře do Coach ACS.</p></div>
       </div>
       <form id="xpsImportForm" class="xps-import-form">
-        <div class="form-row">
-          <label>Kategorie<select name="teamId" required>${state.teams.map((team) => `<option value="${team.id}" ${(feed.teamId || defaultTeamId) === team.id ? "selected" : ""}>${esc(team.name)}</option>`).join("")}</select></label>
-          <label>Sezóna<select name="seasonId" required>${state.seasons.map((season) => `<option value="${season.id}" ${(feed.seasonId || defaultSeasonId) === season.id ? "selected" : ""}>${esc(season.name)}</option>`).join("")}</select></label>
-        </div>
+        <label>Kategorie<select name="teamId" required>${state.teams.map((team) => `<option value="${team.id}" ${(feed.teamId || defaultTeamId) === team.id ? "selected" : ""}>${esc(team.name)}</option>`).join("")}</select></label>
         <label>iCal odkaz<input name="url" value="${esc(feed.url || DEFAULT_XPS_URL)}" placeholder="webcal://..." required /></label>
-        <label>Filtr názvu <input name="filterText" value="${esc(feed.filterText || "")}" placeholder="Volitelné, např. WU9 2017/2018" /></label>
         <div class="xps-import-actions">
           <button class="primary" type="submit" ${xpsImportBusy ? "disabled" : ""}>${xpsImportBusy ? "Načítám..." : "Synchronizovat XPS kalendář"}</button>
           <span class="muted">${esc(xpsImportMessage || feed.lastResult || "Import jen čte iCal. Do XPS se nic nezapisuje.")}</span>
@@ -67,9 +60,7 @@
       await syncXpsFeed({
         ...(state.xpsFeeds[0] || { id: uid("xps") }),
         teamId: data.teamId,
-        seasonId: data.seasonId,
         url: data.url,
-        filterText: data.filterText || "",
       });
     });
 
@@ -90,9 +81,8 @@
 
   function xpsFeedRow(feed) {
     const teamName = state.teams.find((team) => team.id === feed.teamId)?.name || "Bez týmu";
-    const seasonName = state.seasons.find((season) => season.id === feed.seasonId)?.name || "Bez sezóny";
     return `<div class="xps-feed-row">
-      <div><strong>${esc(teamName)} · ${esc(seasonName)}</strong><span>${esc(feed.filterText || "Bez filtru názvu")}</span></div>
+      <div><strong>${esc(teamName)}</strong><span>${esc(shortUrl(feed.url))}</span></div>
       <button data-sync-xps="${feed.id}" type="button">Synchronizovat</button>
       <button class="danger subtle-danger" data-delete-xps="${feed.id}" type="button">Smazat</button>
     </div>`;
@@ -104,9 +94,7 @@
     renderXpsImport();
     try {
       const text = await fetchIcs(feed.url);
-      const events = parseIcs(text)
-        .filter((event) => !feed.filterText || `${event.summary} ${event.description}`.toLowerCase().includes(feed.filterText.toLowerCase()))
-        .filter((event) => isInsideSeason(event, feed.seasonId));
+      const events = parseIcs(text);
       const result = importEvents(feed, events);
       feed.lastSyncAt = new Date().toISOString();
       feed.lastResult = `Hotovo: ${result.created} nových, ${result.updated} aktualizovaných, ${events.length} načtených.`;
@@ -169,10 +157,11 @@
   function eventToSession(feed, event) {
     const start = localParts(event.start);
     const end = event.end ? localParts(event.end) : { date: start.date, time: "" };
+    const seasonId = seasonIdForImportedDate(start.date);
     return {
       id: uid("session"),
       teamId: feed.teamId,
-      seasonId: feed.seasonId,
+      seasonId,
       date: start.date,
       type: inferEventType(event.summary),
       startTime: start.time,
@@ -180,7 +169,7 @@
       place: event.location || "",
       coach: "",
       note: xpsNote(event),
-      periodId: periodForImportedDate(feed.teamId, feed.seasonId, start.date),
+      periodId: periodForImportedDate(feed.teamId, seasonId, start.date),
       mainGoalId: "",
       extraGoalIds: [],
       detailIds: [],
@@ -212,13 +201,11 @@
     return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   }
 
-  function isInsideSeason(event, seasonId) {
-    const season = state.seasons.find((item) => item.id === seasonId);
-    const date = event.start ? localParts(event.start).date : "";
-    if (!date || !season) return true;
-    if (season.start && date < season.start) return false;
-    if (season.end && date > season.end) return false;
-    return true;
+  function seasonIdForImportedDate(date) {
+    return state.seasons.find((season) => (!season.start || date >= season.start) && (!season.end || date <= season.end))?.id ||
+      state.selectedSeasonId ||
+      state.seasons[0]?.id ||
+      "";
   }
 
   function periodForImportedDate(teamId, seasonId, date) {
@@ -286,6 +273,11 @@
       .replace(/\\;/g, ";")
       .replace(/\\\\/g, "\\")
       .trim();
+  }
+
+  function shortUrl(value) {
+    const url = normalizeCalendarUrl(value || "");
+    return url.replace(/^https:\/\/calendar\.google\.com\/calendar\/ical\//, "Google Calendar / ");
   }
 
   window.inferXpsEventType = inferEventType;
