@@ -1,7 +1,9 @@
 (function () {
   const DEFAULT_XPS_URL = "webcal://calendar.google.com/calendar/ical/3740d4abaae966c1ef0f4ba83fc3e5c0a6191c8af530d2ecbcf9efad4f83f471@group.calendar.google.com/public/basic.ics";
+  const AUTO_SYNC_INTERVAL_MS = 12 * 60 * 60 * 1000;
   let xpsImportBusy = false;
   let xpsImportMessage = "";
+  let xpsAutoSyncStarted = false;
 
   function normalizeXpsState(nextState = state) {
     return {
@@ -41,7 +43,8 @@
     const feed = state.xpsFeeds[0] || {};
     panel.innerHTML = `
       <div class="setup-head">
-        <div><h2>XPS iCal import</h2><p>Jednosměrné načtení událostí z XPS/Google kalendáře do Coach ACS.</p></div>
+        <div><h2>XPS iCal import</h2><p>Jednosměrné načtení událostí z XPS/Google kalendáře do Coach ACS. Aplikace je sama zkontroluje zhruba dvakrát denně při používání.</p></div>
+        <button id="syncAllXpsSetup" class="primary" type="button" ${xpsImportBusy || !state.xpsFeeds.length ? "disabled" : ""}>${xpsImportBusy ? "Synchronizuji..." : "Synchronizovat vše"}</button>
       </div>
       <form id="xpsImportForm" class="xps-import-form">
         <label>Kategorie<select name="teamId" required>${state.teams.map((team) => `<option value="${team.id}" ${(feed.teamId || defaultTeamId) === team.id ? "selected" : ""}>${esc(team.name)}</option>`).join("")}</select></label>
@@ -64,6 +67,7 @@
       });
     });
 
+    panel.querySelector("#syncAllXpsSetup")?.addEventListener("click", () => syncAllXpsFeeds());
     panel.querySelectorAll("[data-sync-xps]").forEach((button) => {
       button.addEventListener("click", async () => {
         const feed = state.xpsFeeds.find((item) => item.id === button.dataset.syncXps);
@@ -88,28 +92,69 @@
     </div>`;
   }
 
-  async function syncXpsFeed(feed) {
-    xpsImportBusy = true;
-    xpsImportMessage = "Načítám iCal...";
-    renderXpsImport();
+  async function syncXpsFeed(feed, options = {}) {
+    const shouldFocus = options.focus !== false;
+    const silent = Boolean(options.silent);
+    if (!silent) {
+      xpsImportBusy = true;
+      xpsImportMessage = "Načítám iCal...";
+      renderXpsImport();
+    }
     try {
       const text = await fetchIcs(feed.url);
       const events = parseIcs(text);
       const result = importEvents(feed, events);
-      focusImportedSessions(feed, result.sessions);
+      if (shouldFocus) focusImportedSessions(feed, result.sessions);
       feed.lastSyncAt = new Date().toISOString();
-      feed.lastResult = `Hotovo: ${result.created} nových, ${result.updated} aktualizovaných, ${events.length} načtených. Kalendář je přepnutý na importovaný tým.`;
+      feed.lastResult = `Hotovo: ${result.created} nových, ${result.updated} aktualizovaných, ${events.length} načtených.${shouldFocus ? " Kalendář je přepnutý na importovaný tým." : ""}`;
       state.xpsFeeds = [feed, ...state.xpsFeeds.filter((item) => item.id !== feed.id)];
       save();
       xpsImportMessage = feed.lastResult;
-      render();
+      if (!silent) render();
+      return result;
     } catch (error) {
-      xpsImportMessage = `Chyba importu: ${error.message || error}`;
-      renderXpsImport();
+      if (silent) {
+        console.warn("[Coach ACS] Automatická XPS synchronizace selhala", error);
+      } else {
+        xpsImportMessage = `Chyba importu: ${error.message || error}`;
+        renderXpsImport();
+      }
+      throw error;
     } finally {
-      xpsImportBusy = false;
-      renderXpsImport();
+      if (!silent) {
+        xpsImportBusy = false;
+        renderXpsImport();
+      }
     }
+  }
+
+  async function syncAllXpsFeeds(options = {}) {
+    state = normalizeXpsState(state);
+    const feeds = state.xpsFeeds.filter((feed) => feed.teamId && feed.url);
+    if (!feeds.length || xpsImportBusy) {
+      if (!feeds.length) xpsImportMessage = "Nejdřív přidej alespoň jeden iCal odkaz.";
+      renderXpsImport();
+      return;
+    }
+    xpsImportBusy = true;
+    xpsImportMessage = options.automatic ? "Automaticky kontroluji XPS kalendáře..." : "Synchronizuji všechny XPS kalendáře...";
+    updateQuickSyncButton(true);
+    renderXpsImport();
+    const summary = { created: 0, updated: 0, loaded: 0, failed: 0 };
+    for (const feed of feeds) {
+      try {
+        const result = await syncXpsFeed(feed, { focus: false, silent: true });
+        summary.created += result.created || 0;
+        summary.updated += result.updated || 0;
+        summary.loaded += result.sessions?.length || 0;
+      } catch {
+        summary.failed += 1;
+      }
+    }
+    xpsImportBusy = false;
+    xpsImportMessage = `Synchronizace hotová: ${summary.created} nových, ${summary.updated} aktualizovaných${summary.failed ? `, ${summary.failed} chyba` : ""}.`;
+    updateQuickSyncButton(false);
+    render();
   }
 
   async function fetchIcs(rawUrl) {
@@ -325,8 +370,38 @@
 
   window.inferXpsEventType = inferEventType;
 
+  function updateQuickSyncButton(isBusy = xpsImportBusy) {
+    const button = document.querySelector("#syncAllXps");
+    if (!button) return;
+    button.disabled = isBusy;
+    button.textContent = isBusy ? "Synchronizuji..." : "Synchronizovat kalendáře";
+  }
+
+  function needsAutoSync(feed) {
+    if (!feed?.teamId || !feed?.url) return false;
+    const lastSync = Date.parse(feed.lastSyncAt || "");
+    return !lastSync || Date.now() - lastSync >= AUTO_SYNC_INTERVAL_MS;
+  }
+
+  function runAutoXpsSync() {
+    state = normalizeXpsState(state);
+    if (!state.xpsFeeds.some(needsAutoSync)) return;
+    syncAllXpsFeeds({ automatic: true });
+  }
+
+  function startAutoXpsSync() {
+    if (xpsAutoSyncStarted) return;
+    xpsAutoSyncStarted = true;
+    document.querySelector("#syncAllXps")?.addEventListener("click", () => syncAllXpsFeeds());
+    updateQuickSyncButton(false);
+    window.setTimeout(runAutoXpsSync, 2500);
+    window.setInterval(runAutoXpsSync, 60 * 60 * 1000);
+  }
+
   try {
     state = normalizeXpsState(state);
+    if (window.COACH_ACS_UNLOCKED) startAutoXpsSync();
+    else window.addEventListener("coach-acs-unlocked", startAutoXpsSync, { once: true });
     render();
   } catch {}
 })();

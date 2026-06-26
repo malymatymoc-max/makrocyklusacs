@@ -723,8 +723,11 @@ function hasRatings(s) {
 function isMatchSession(session) {
   return ["Utkání", "Turnaj"].includes(session?.type);
 }
+function isTrainingSession(session) {
+  return ["TJ", "Skupinový TJ", "Pohybový TJ"].includes(session?.type);
+}
 function macroSessions() {
-  return sessions().filter((session) => !isMatchSession(session));
+  return sessions().filter((session) => isTrainingSession(session));
 }
 function clearMacrocycleFields(session) {
   session.mainGoalId = "";
