@@ -28,5 +28,10 @@
     { "src": "sw.js", "use": "@vercel/static" },
     { "src": "manifest.webmanifest", "use": "@vercel/static" },
     { "src": "icon.svg", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/api/xps-ical", "dest": "/api/xps-ical.js" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/$1" }
   ]
 }
