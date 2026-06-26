@@ -84,10 +84,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); box-shad
 .day-head { padding: 11px; border-bottom: 1px solid var(--line); font-weight: 900; }
 .day-head span { display: block; color: var(--muted); font-size: 12px; font-weight: 600; }
 .day-events { display: grid; align-content: start; }
-.event { display: grid; gap: 5px; width: calc(100% - 18px); margin: 9px; padding: 10px; border-radius: 8px; border: 1px solid var(--line); border-left: 4px solid var(--blue); background: #fff; text-align: left; }
+.event { display: grid; width: calc(100% - 14px); margin: 7px; padding: 8px 9px; border-radius: 7px; border: 1px solid var(--line); border-left: 4px solid var(--blue); background: #fff; text-align: left; }
 .event.active { border-color: var(--green); border-left-color: var(--green); box-shadow: 0 0 0 3px rgba(0,122,61,.12); }
 .event.match { border-left-color: var(--amber); }
-.event strong { font-size: 13px; }
+.event strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .event span { color: var(--muted); font-size: 12px; }
 .empty-day { display: grid; gap: 4px; padding: 14px; color: var(--muted); font-size: 13px; }
 .empty-day span { font-size: 11px; color: #84928a; }

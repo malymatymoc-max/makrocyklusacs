@@ -222,7 +222,7 @@ function renderCalendar() {
   els.grid.innerHTML = days
     .map((day) => {
       const key = dateKey(day);
-      const daySessions = visibleSessions().filter((s) => s.date === key);
+      const daySessions = visibleSessions().filter((s) => sessionOccursOn(s, key));
       return `<article class="day" data-date="${key}" title="Dvojklikem vytvoříš novou událost">
         <div class="day-head">${weekday(day)}<span>${long(day)}</span></div>
         <div class="day-events">${daySessions.length ? daySessions.map(sessionCard).join("") : `<div class="empty-day">Bez události<span>Dvojklik pro přidání</span></div>`}</div>
@@ -248,7 +248,7 @@ function renderMonth() {
   els.monthGrid.innerHTML = Array.from({ length: 42 }, (_, i) => {
     const day = addDays(firstGridDay, i);
     const key = dateKey(day);
-    const count = visibleSessions().filter((s) => s.date === key).length;
+    const count = visibleSessions().filter((s) => sessionOccursOn(s, key)).length;
     const isOutside = day.getMonth() !== month;
     const isSelectedWeek = key >= dateKey(weekStart) && key <= dateKey(addDays(weekStart, 6));
     return `<button class="month-day ${isOutside ? "outside" : ""} ${isSelectedWeek ? "week-mark" : ""}" data-month-date="${key}" type="button">
@@ -266,12 +266,9 @@ function renderMonth() {
 }
 
 function sessionCard(s) {
-  const goal = isMatchSession(s) ? performanceLabel(s) : goalById(s.mainGoalId)?.name || "Bez cíle";
   const klass = ["Utkání", "Turnaj"].includes(s.type) ? "match" : "";
   return `<button class="event ${klass} ${s.id === selectedSessionId ? "active" : ""}" data-session="${s.id}" type="button">
-    <strong>${esc(s.startTime || "")} ${esc(s.type)}</strong>
-    <span>${esc(goal)}</span>
-    <span>${esc(s.place || "Bez místa")}</span>
+    <strong>${esc(sessionCalendarTitle(s))}</strong>
   </button>`;
 }
 
@@ -550,6 +547,7 @@ function makeSession(data) {
     teamId: state.selectedTeamId,
     seasonId: state.selectedSeasonId,
     date: data.date,
+    endDate: data.endDate || "",
     type: data.type || "TJ",
     startTime: data.startTime || "",
     endTime: data.endTime || "",
@@ -789,6 +787,18 @@ function goalById(id) { return state.goals.find((g) => g.id === id); }
 function detailById(id) { return state.details.find((d) => d.id === id); }
 function periodById(id) { return state.periods.find((p) => p.id === id); }
 function periodForDate(date) { return periods().find((p) => date >= p.start && date <= p.end); }
+function sessionEndDate(session) {
+  return session?.endDate && session.endDate >= session.date ? session.endDate : session?.date || "";
+}
+function sessionOccursOn(session, date) {
+  if (!session?.date || !date) return false;
+  return date >= session.date && date <= sessionEndDate(session);
+}
+function sessionCalendarTitle(session) {
+  const name = session?.sourceSummary || session?.title || "";
+  const prefix = session?.startTime ? `${session.startTime} ` : "";
+  return name || `${prefix}${session?.type || "Událost"}`;
+}
 function ensureSelection() {
   state = migrateGlobalSeasons(state);
   if (!state.selectedTeamId || !state.teams.some((t) => t.id === state.selectedTeamId)) state.selectedTeamId = state.teams[0]?.id || "";

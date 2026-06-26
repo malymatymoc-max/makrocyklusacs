@@ -23,13 +23,10 @@ function visibleSessions() {
 }
 
 function sessionCard(s) {
-  const goal = goalById(s.mainGoalId)?.name || "Bez cíle";
   const teamName = state.teams.find((team) => team.id === s.teamId)?.name || "Tým";
   const klass = ["Utkání", "Turnaj"].includes(s.type) ? "match" : "";
-  return `<button class="event ${klass} ${s.id === selectedSessionId ? "active" : ""}" data-session="${s.id}" type="button">
-    <strong>${esc(s.startTime || "")} ${esc(s.type)}</strong>
-    <span>${esc(teamName)} · ${esc(goal)}</span>
-    <span>${esc(s.place || "Bez místa")}</span>
+  return `<button class="event ${klass} ${s.id === selectedSessionId ? "active" : ""}" data-session="${s.id}" title="${esc(teamName)}" type="button">
+    <strong>${esc(sessionCalendarTitle(s))}</strong>
   </button>`;
 }
 
@@ -100,7 +97,7 @@ function renderCalendar() {
   els.grid.innerHTML = days
     .map((day) => {
       const key = dateKey(day);
-      const daySessions = visibleSessions().filter((s) => s.date === key);
+      const daySessions = visibleSessions().filter((s) => sessionOccursOn(s, key));
       return `<article class="day" data-date="${key}" title="Dvojklikem vytvoříš novou událost">
         <div class="day-head">${weekday(day)}<span>${long(day)}</span></div>
         <div class="day-events">${daySessions.length ? daySessions.map(sessionCard).join("") : `<div class="empty-day">Bez události<span>Dvojklik pro přidání</span></div>`}</div>
@@ -163,6 +160,7 @@ function makeSessionForTeam(data) {
     teamId: data.teamId,
     seasonId: data.seasonId,
     date: data.date,
+    endDate: data.endDate || "",
     type: data.type || "TJ",
     startTime: data.startTime || "",
     endTime: data.endTime || "",

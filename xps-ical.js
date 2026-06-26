@@ -186,12 +186,14 @@
   function eventToSession(feed, event) {
     const start = localParts(event.start);
     const end = event.end ? localParts(event.end) : { date: start.date, time: "" };
+    const endDate = calendarDisplayEndDate(start.date, end.date, event.endAllDay);
     const seasonId = seasonIdForImportedDate(start.date);
     return {
       id: uid("session"),
       teamId: feed.teamId,
       seasonId,
       date: start.date,
+      endDate: endDate === start.date ? "" : endDate,
       type: inferEventType(event.summary),
       startTime: start.time,
       endTime: end.date === start.date ? end.time : "",
@@ -265,8 +267,14 @@
       if (key === "LOCATION") event.location = value;
       if (key === "DESCRIPTION") event.description = value;
       if (key === "LAST-MODIFIED") event.lastModified = value;
-      if (key === "DTSTART") event.start = parseIcsDate(value);
-      if (key === "DTEND") event.end = parseIcsDate(value);
+      if (key === "DTSTART") {
+        event.startAllDay = /^\d{8}$/.test(value);
+        event.start = parseIcsDate(value);
+      }
+      if (key === "DTEND") {
+        event.endAllDay = /^\d{8}$/.test(value);
+        event.end = parseIcsDate(value);
+      }
     });
     return event;
   }
@@ -293,6 +301,12 @@
       hour12: false,
     }).formatToParts(date).reduce((items, part) => ({ ...items, [part.type]: part.value }), {});
     return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
+  }
+
+  function calendarDisplayEndDate(startDate, endDate, endAllDay) {
+    if (!endDate || endDate < startDate) return startDate;
+    if (endAllDay && endDate > startDate) return dateKey(addDays(new Date(`${endDate}T12:00:00`), -1));
+    return endDate;
   }
 
   function decodeIcs(value) {
