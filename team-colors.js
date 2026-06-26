@@ -80,7 +80,7 @@
     els.monthGrid.innerHTML = Array.from({ length: 42 }, (_, index) => {
       const day = addDays(firstGridDay, index);
       const key = dateKey(day);
-      const daySessions = visibleSessions().filter((session) => session.date === key);
+      const daySessions = visibleSessions().filter((session) => sessionOccursOn(session, key));
       const teamIds = [...new Set(daySessions.map((session) => session.teamId))];
       const isOutside = day.getMonth() !== month;
       const isSelectedWeek = key >= dateKey(weekStart) && key <= dateKey(addDays(weekStart, 6));

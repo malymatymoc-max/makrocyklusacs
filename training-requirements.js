@@ -117,13 +117,9 @@
   }
 
   sessionCard = function sessionCardWithWarnings(session) {
-    const goal = isMatchSession(session) ? performanceLabel(session) : goalById(session.mainGoalId)?.name || "Bez cíle";
-    const teamName = state.teams.find((team) => team.id === session.teamId)?.name || "Tým";
     const klass = ["Utkání", "Turnaj"].includes(session.type) ? "match" : "";
     return `<button class="event ${klass} ${session.id === selectedSessionId ? "active" : ""}" data-session="${session.id}" type="button">
-      <strong>${esc(session.startTime || "")} ${esc(session.type)}${warningBadges(session)}</strong>
-      <span>${esc(teamName)} · ${esc(goal)}</span>
-      <span>${esc(session.place || "Bez místa")}</span>
+      <strong><span class="event-title">${esc(sessionCalendarTitle(session))}</span>${warningBadges(session)}</strong>
     </button>`;
   };
 

@@ -10,7 +10,7 @@
     <title>Coach ACS</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=156" />
+    <link rel="stylesheet" href="./styles.css?v=157" />
     <style>
       .topbar { grid-template-columns: minmax(260px, 1.4fr) minmax(160px, .8fr) auto auto; }
       .team-picker-label { min-width: 0; }
@@ -32,7 +32,8 @@
       .event.active { border-left-color: var(--team-color, var(--green)); }
       .month-team-dots { position: absolute; left: 50%; bottom: 5px; display: flex; gap: 3px; transform: translateX(-50%); }
       .month-team-dots i { position: static; display: block; width: 6px; height: 6px; border-radius: 999px; }
-      .event strong { display: flex; align-items: center; gap: 6px; }
+      .event strong { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; white-space: nowrap; }
+      .event-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .event-warnings { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #fff0da; color: #8a5600; font-size: 11px; line-height: 1; font-weight: 900; }
       @media (max-width: 760px) { .topbar { grid-template-columns: 1fr; } }
     </style>
@@ -248,8 +249,8 @@
     <script src="./phase-model.js?v=150"></script>
     <script src="./team-scope.js?v=150"></script>
     <script src="./calendar-teams.js?v=156"></script>
-    <script src="./training-requirements.js?v=148"></script>
-    <script src="./team-colors.js?v=148"></script>
+    <script src="./training-requirements.js?v=157"></script>
+    <script src="./team-colors.js?v=157"></script>
     <script src="./players.js?v=148"></script>
     <script src="./matchday.js?v=152"></script>
     <script src="./local-ui-state.js?v=150"></script>

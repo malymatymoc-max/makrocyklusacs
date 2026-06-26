@@ -88,6 +88,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); box-shad
 .event.active { border-color: var(--green); border-left-color: var(--green); box-shadow: 0 0 0 3px rgba(0,122,61,.12); }
 .event.match { border-left-color: var(--amber); }
 .event strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.event-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .event span { color: var(--muted); font-size: 12px; }
 .empty-day { display: grid; gap: 4px; padding: 14px; color: var(--muted); font-size: 13px; }
 .empty-day span { font-size: 11px; color: #84928a; }
