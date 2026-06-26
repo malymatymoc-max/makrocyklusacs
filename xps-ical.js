@@ -371,10 +371,10 @@
   window.inferXpsEventType = inferEventType;
 
   function updateQuickSyncButton(isBusy = xpsImportBusy) {
-    const button = document.querySelector("#syncAllXps");
-    if (!button) return;
-    button.disabled = isBusy;
-    button.textContent = isBusy ? "Synchronizuji..." : "Synchronizovat kalendáře";
+    document.querySelectorAll("[data-sync-all-xps]").forEach((button) => {
+      button.disabled = isBusy;
+      button.textContent = isBusy ? "Synchronizuji..." : button.classList.contains("sync-all-xps-button") ? "Sync kalendáře" : "Synchronizovat kalendáře";
+    });
   }
 
   function needsAutoSync(feed) {
@@ -392,7 +392,9 @@
   function startAutoXpsSync() {
     if (xpsAutoSyncStarted) return;
     xpsAutoSyncStarted = true;
-    document.querySelector("#syncAllXps")?.addEventListener("click", () => syncAllXpsFeeds());
+    document.querySelectorAll("[data-sync-all-xps]").forEach((button) => {
+      button.addEventListener("click", () => syncAllXpsFeeds());
+    });
     updateQuickSyncButton(false);
     window.setTimeout(runAutoXpsSync, 2500);
     window.setInterval(runAutoXpsSync, 60 * 60 * 1000);

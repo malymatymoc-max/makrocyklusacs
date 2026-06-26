@@ -10,9 +10,9 @@
     <title>Coach ACS</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=157" />
+    <link rel="stylesheet" href="./styles.css?v=158" />
     <style>
-      .topbar { grid-template-columns: minmax(260px, 1.4fr) minmax(160px, .8fr) auto auto; }
+      .topbar { grid-template-columns: minmax(260px, 1.4fr) minmax(160px, .8fr) auto auto auto; }
       .team-picker-label { min-width: 0; }
       .legacy-team-select { display: block; }
       .team-multi { display: none; flex-wrap: wrap; gap: 7px; min-height: 38px; align-items: center; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
@@ -68,7 +68,7 @@
         <div class="quick-actions">
           <strong>Rychlé akce</strong>
           <button id="quickSession" type="button">+ Nová událost</button>
-          <button id="syncAllXps" type="button">Synchronizovat kalendáře</button>
+          <button data-sync-all-xps type="button">Synchronizovat kalendáře</button>
           <button id="logoutDevice" type="button">Odhlásit zařízení</button>
         </div>
       </aside>
@@ -79,6 +79,7 @@
           <label>Sezóna<select id="seasonSelect"></select></label>
           <label style="display: none">Období / fáze<select id="periodSelect"></select></label>
           <span id="syncStatus" class="sync-status">Lokální režim</span>
+          <button class="mini sync-all-xps-button" data-sync-all-xps type="button">Sync kalendáře</button>
           <button id="newSession" class="primary" type="button">+ Nová událost</button>
         </header>
 
@@ -256,6 +257,6 @@
     <script src="./matchday.js?v=152"></script>
     <script src="./local-ui-state.js?v=150"></script>
     <script src="./sync-diagnostics.js?v=149"></script>
-    <script src="./xps-ical.js?v=158"></script>
+    <script src="./xps-ical.js?v=159"></script>
   </body>
 </html>

@@ -47,7 +47,7 @@ body:not(.auth-locked) .auth-gate { display: none; }
 .quick-actions button { padding: 0; min-height: 34px; }
 
 .main { min-width: 0; }
-.topbar { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: minmax(260px, 1.4fr) minmax(160px, .8fr) auto auto; gap: 12px; align-items: end; padding: 16px 18px; border-bottom: 1px solid var(--line); background: rgba(244,246,244,.96); backdrop-filter: blur(12px); }
+.topbar { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: minmax(260px, 1.4fr) minmax(160px, .8fr) auto auto auto; gap: 12px; align-items: end; padding: 16px 18px; border-bottom: 1px solid var(--line); background: rgba(244,246,244,.96); backdrop-filter: blur(12px); }
 label { display: grid; gap: 6px; color: #35463f; font-size: 12px; font-weight: 800; }
 input, select, textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--text); outline: 0; }
 input, select { height: 38px; padding: 0 10px; }
