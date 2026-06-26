@@ -293,6 +293,14 @@ body.matchday-live-active .main { width: 100%; min-height: 100vh; overflow-x: hi
 .setup-card th { color: var(--muted); font-size: 12px; }
 .row-actions { display: flex; justify-content: flex-end; gap: 6px; }
 .mini { border: 1px solid var(--line); border-radius: 7px; background: #fff; min-height: 30px; padding: 0 9px; font-size: 12px; font-weight: 800; }
+.xps-card { grid-column: 1 / -1; }
+.xps-import-form { display: grid; gap: 10px; }
+.xps-import-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.xps-feed-list { display: grid; gap: 8px; margin-top: 10px; }
+.xps-feed-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.xps-feed-row strong, .xps-feed-row span { display: block; }
+.xps-feed-row span { color: var(--muted); font-size: 12px; }
+.xps-feed-row button { min-height: 34px; border: 1px solid var(--line); border-radius: 7px; background: #fff; font-weight: 800; }
 
 dialog { width: min(620px, calc(100vw - 24px)); border: 0; border-radius: 8px; padding: 0; box-shadow: 0 28px 90px rgba(0,0,0,.24); }
 #sessionDialog { width: min(780px, calc(100vw - 24px)); max-height: calc(100vh - 28px); overflow: auto; }

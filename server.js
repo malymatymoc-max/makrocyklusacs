@@ -25,6 +25,9 @@ function blankState() {
     goals: [],
     details: [],
     sessions: [],
+    players: [],
+    matchdays: [],
+    xpsFeeds: [],
     selectedTeamId: "",
     selectedSeasonId: "",
     selectedPeriodId: "all",
@@ -131,8 +134,37 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.url.startsWith("/api/xps-ical")) {
+    try {
+      const requestUrl = new URL(req.url, `http://${req.headers.host}`);
+      const calendarUrl = normalizeCalendarUrl(requestUrl.searchParams.get("url"));
+      const response = await fetch(calendarUrl, { headers: { Accept: "text/calendar,*/*" } });
+      if (!response.ok) throw new Error(`iCal odpověděl ${response.status}`);
+      const text = await response.text();
+      if (!text.includes("BEGIN:VCALENDAR")) throw new Error("Odkaz nevrátil platný iCal kalendář");
+      res.writeHead(200, {
+        "Content-Type": "text/calendar; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Access-Control-Allow-Origin": "*",
+      });
+      res.end(text);
+    } catch (error) {
+      sendJson(res, 400, { error: error.message || "iCal se nepodařilo načíst" });
+    }
+    return;
+  }
+
   serveFile(req, res);
 });
+
+function normalizeCalendarUrl(rawUrl) {
+  const value = String(rawUrl || "").trim().replace(/^webcal:\/\//i, "https://");
+  const url = new URL(value);
+  const allowedHosts = new Set(["calendar.google.com", "www.google.com"]);
+  if (url.protocol !== "https:" || !allowedHosts.has(url.hostname)) throw new Error("Povolený je jen Google Calendar iCal odkaz");
+  if (!url.pathname.endsWith(".ics")) throw new Error("Odkaz musí končit na .ics");
+  return url.toString();
+}
 
 server.listen(PORT, HOST, () => {
   console.log(`Makrocyklus shared app: http://${HOST}:${PORT}`);

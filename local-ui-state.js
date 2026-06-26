@@ -1,6 +1,6 @@
 (function () {
   const UI_STORAGE_KEY = "makrocyklus-ui-state-v1";
-  const SHARED_KEYS = ["teams", "seasons", "periods", "goals", "details", "sessions", "players", "matchdays"];
+  const SHARED_KEYS = ["teams", "seasons", "periods", "goals", "details", "sessions", "players", "matchdays", "xpsFeeds"];
 
   function sharedStateForSync(source) {
     return SHARED_KEYS.reduce((payload, key) => {

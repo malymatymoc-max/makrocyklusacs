@@ -801,7 +801,7 @@ function load() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || blank(); } catch { return blank(); }
 }
 function blank() {
-  return { teams: [], seasons: [], periods: [], goals: [], details: [], sessions: [], selectedTeamId: "", selectedSeasonId: "", selectedPeriodId: "all" };
+  return { teams: [], seasons: [], periods: [], goals: [], details: [], sessions: [], players: [], matchdays: [], xpsFeeds: [], selectedTeamId: "", selectedSeasonId: "", selectedPeriodId: "all" };
 }
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));

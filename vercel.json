@@ -10,6 +10,7 @@
   ],
   "builds": [
     { "src": "index.html", "use": "@vercel/static" },
+    { "src": "api/xps-ical.js", "use": "@vercel/node" },
     { "src": "app.js", "use": "@vercel/static" },
     { "src": "config.js", "use": "@vercel/static" },
     { "src": "progress-fix.js", "use": "@vercel/static" },
@@ -22,6 +23,7 @@
     { "src": "matchday.js", "use": "@vercel/static" },
     { "src": "local-ui-state.js", "use": "@vercel/static" },
     { "src": "sync-diagnostics.js", "use": "@vercel/static" },
+    { "src": "xps-ical.js", "use": "@vercel/static" },
     { "src": "styles.css", "use": "@vercel/static" },
     { "src": "sw.js", "use": "@vercel/static" },
     { "src": "manifest.webmanifest", "use": "@vercel/static" },
