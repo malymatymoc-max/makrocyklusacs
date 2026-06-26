@@ -96,8 +96,9 @@
       const text = await fetchIcs(feed.url);
       const events = parseIcs(text);
       const result = importEvents(feed, events);
+      focusImportedSessions(feed, result.sessions);
       feed.lastSyncAt = new Date().toISOString();
-      feed.lastResult = `Hotovo: ${result.created} nových, ${result.updated} aktualizovaných, ${events.length} načtených.`;
+      feed.lastResult = `Hotovo: ${result.created} nových, ${result.updated} aktualizovaných, ${events.length} načtených. Kalendář je přepnutý na importovaný tým.`;
       state.xpsFeeds = [feed, ...state.xpsFeeds.filter((item) => item.id !== feed.id)];
       save();
       xpsImportMessage = feed.lastResult;
@@ -128,7 +129,7 @@
   }
 
   function importEvents(feed, events) {
-    const result = { created: 0, updated: 0 };
+    const result = { created: 0, updated: 0, sessions: [] };
     events.forEach((event) => {
       if (!event.uid || !event.start) return;
       const mapped = eventToSession(feed, event);
@@ -145,13 +146,41 @@
           performanceRating: existing.performanceRating || 0,
           repeatGroupId: existing.repeatGroupId || "",
         });
+        result.sessions.push(existing);
         result.updated += 1;
       } else {
         state.sessions.push(mapped);
+        result.sessions.push(mapped);
         result.created += 1;
       }
     });
     return result;
+  }
+
+  function focusImportedSessions(feed, importedSessions) {
+    const sessions = (importedSessions || []).filter((session) => session.teamId === feed.teamId && session.date);
+    state.selectedTeamId = feed.teamId;
+    state.calendarTeamIds = [...new Set([feed.teamId, ...(Array.isArray(state.calendarTeamIds) ? state.calendarTeamIds : [])])];
+    const target = nearestSession(sessions);
+    if (target) {
+      state.selectedSeasonId = target.seasonId || state.selectedSeasonId;
+      selectedSessionId = target.id;
+      weekStart = monday(new Date(`${target.date}T12:00:00`));
+      monthCursor = firstOfMonth(new Date(`${target.date}T12:00:00`));
+    }
+    state.selectedPeriodId = "all";
+  }
+
+  function nearestSession(sessions) {
+    const today = todayKey();
+    return sessions
+      .slice()
+      .sort((a, b) => {
+        const aFuture = a.date >= today ? 0 : 1;
+        const bFuture = b.date >= today ? 0 : 1;
+        if (aFuture !== bFuture) return aFuture - bFuture;
+        return aFuture === 0 ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date);
+      })[0] || null;
   }
 
   function eventToSession(feed, event) {
