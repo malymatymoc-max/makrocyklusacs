@@ -1,12 +1,13 @@
 (function () {
   const DEFAULT_XPS_URL = "webcal://calendar.google.com/calendar/ical/3740d4abaae966c1ef0f4ba83fc3e5c0a6191c8af530d2ecbcf9efad4f83f471@group.calendar.google.com/public/basic.ics";
   const AUTO_SYNC_INTERVAL_MS = 12 * 60 * 60 * 1000;
+  const UNASSIGNED_TEAM_ID = "xps_unassigned";
   let xpsImportBusy = false;
   let xpsImportMessage = "";
   let xpsAutoSyncStarted = false;
 
   function normalizeXpsState(nextState = state) {
-    return {
+    const next = {
       ...nextState,
       xpsFeeds: Array.isArray(nextState.xpsFeeds) ? nextState.xpsFeeds.map((feed) => ({
         id: feed.id || uid("xps"),
@@ -17,6 +18,8 @@
       })) : [],
       sessions: (nextState.sessions || []).map((session) => ({ ...session })),
     };
+    if (next.sessions.some((session) => session.teamId === UNASSIGNED_TEAM_ID || session.xpsUnassigned)) ensureUnassignedTeam(next);
+    return next;
   }
 
   const xpsNormalizeState = window.normalizeState;
@@ -180,6 +183,12 @@
       const mapped = eventToSession(feed, event);
       const existing = state.sessions.find((session) => session.source === "xps-ical" && session.sourceUid === event.uid);
       if (existing) {
+        if (existing.xpsCategoryManual && state.teams.some((team) => team.id === existing.teamId)) {
+          mapped.teamId = existing.teamId;
+          mapped.xpsUnassigned = false;
+          mapped.xpsCategoryManual = true;
+          mapped.periodId = periodForImportedDate(existing.teamId, mapped.seasonId, mapped.date);
+        }
         Object.assign(existing, {
           ...mapped,
           id: existing.id,
@@ -190,6 +199,7 @@
           detailRatings: existing.detailRatings || {},
           performanceRating: existing.performanceRating || 0,
           repeatGroupId: existing.repeatGroupId || "",
+          xpsCategoryManual: existing.xpsCategoryManual || mapped.xpsCategoryManual || false,
         });
         result.sessions.push(existing);
         result.updated += 1;
@@ -203,15 +213,18 @@
   }
 
   function focusImportedSessions(feed, importedSessions) {
-    const sessions = (importedSessions || []).filter((session) => session.teamId === feed.teamId && session.date);
-    state.selectedTeamId = feed.teamId;
-    state.calendarTeamIds = [...new Set([feed.teamId, ...(Array.isArray(state.calendarTeamIds) ? state.calendarTeamIds : [])])];
+    const sessions = (importedSessions || []).filter((session) => session.teamId && session.date);
+    const importedTeamIds = [...new Set(sessions.map((session) => session.teamId))];
+    state.calendarTeamIds = [...new Set([...importedTeamIds, ...(Array.isArray(state.calendarTeamIds) ? state.calendarTeamIds : [])])];
     const target = nearestSession(sessions);
     if (target) {
+      state.selectedTeamId = target.teamId;
       state.selectedSeasonId = target.seasonId || state.selectedSeasonId;
       selectedSessionId = target.id;
       weekStart = monday(new Date(`${target.date}T12:00:00`));
       monthCursor = firstOfMonth(new Date(`${target.date}T12:00:00`));
+    } else {
+      state.selectedTeamId = feed.teamId;
     }
     state.selectedPeriodId = "all";
   }
@@ -233,9 +246,11 @@
     const end = event.end ? localParts(event.end) : { date: start.date, time: "" };
     const endDate = calendarDisplayEndDate(start.date, end.date, event.endAllDay);
     const seasonId = seasonIdForImportedDate(start.date);
+    const detectedTeam = detectTeamForEvent(event);
+    const teamId = detectedTeam?.id || ensureUnassignedTeam().id;
     return {
       id: uid("session"),
-      teamId: feed.teamId,
+      teamId,
       seasonId,
       date: start.date,
       endDate: endDate === start.date ? "" : endDate,
@@ -245,7 +260,7 @@
       place: event.location || "",
       coach: "",
       note: xpsNote(event),
-      periodId: periodForImportedDate(feed.teamId, seasonId, start.date),
+      periodId: periodForImportedDate(teamId, seasonId, start.date),
       mainGoalId: "",
       extraGoalIds: [],
       detailIds: [],
@@ -259,7 +274,43 @@
       sourceCalendarUrl: normalizeCalendarUrl(feed.url),
       sourceSummary: event.summary || "",
       sourceLastModified: event.lastModified || "",
+      xpsDetectedCategory: detectedTeam?.name || "",
+      xpsUnassigned: !detectedTeam,
+      xpsCategoryManual: false,
     };
+  }
+
+  function ensureUnassignedTeam(targetState = state) {
+    let team = targetState.teams.find((item) => item.id === UNASSIGNED_TEAM_ID);
+    if (!team) {
+      team = { id: UNASSIGNED_TEAM_ID, name: "Nezařazeno", color: "#8a9490", system: true };
+      targetState.teams.push(team);
+    } else {
+      team.name = team.name || "Nezařazeno";
+      team.color = "#8a9490";
+      team.system = true;
+    }
+    return team;
+  }
+
+  function detectTeamForEvent(event) {
+    const text = normalizeCategoryText(`${event.summary || ""} ${event.description || ""}`);
+    const teams = state.teams.filter((team) => team.id !== UNASSIGNED_TEAM_ID);
+    const byName = teams.find((team) => {
+      const name = normalizeCategoryText(team.name);
+      return name && text.includes(name);
+    });
+    if (byName) return byName;
+    const token = text.match(/wu\d{1,2}/)?.[0] || "";
+    if (!token) return null;
+    return teams.find((team) => {
+      const name = normalizeCategoryText(team.name);
+      return name.includes(token);
+    }) || null;
+  }
+
+  function normalizeCategoryText(value) {
+    return stripDiacritics(String(value || "").toLowerCase()).replace(/\\s+/g, "");
   }
 
   function inferEventType(summary) {

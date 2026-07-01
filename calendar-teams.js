@@ -43,7 +43,8 @@ function renderHeaderTeamPicker() {
   const host = document.querySelector("#teamMultiSelect");
   if (!host) return;
   const selected = new Set(visibleTeamIds());
-  host.innerHTML = state.teams.length ? state.teams.map((team) => `
+  const visibleTeams = state.teams.filter((team) => !team.system || team.id === "xps_unassigned");
+  host.innerHTML = visibleTeams.length ? visibleTeams.map((team) => `
     <label class="team-pill ${team.id === state.selectedTeamId ? "active" : ""}">
       <input type="checkbox" value="${team.id}" ${selected.has(team.id) ? "checked" : ""} />
       <span>${esc(team.name)}</span>
@@ -136,7 +137,7 @@ function openNewSessionDialog(date) {
   }
   els.newSessionForm.reset();
   const teamSelect = els.newSessionForm.elements.teamId;
-  teamSelect.innerHTML = state.teams.map(option).join("");
+  teamSelect.innerHTML = state.teams.filter((team) => !team.system).map(option).join("");
   teamSelect.value = state.selectedTeamId || visibleTeamIds()[0] || state.teams[0]?.id || "";
   fillNewSessionSeasons();
   teamSelect.onchange = () => fillNewSessionSeasons();

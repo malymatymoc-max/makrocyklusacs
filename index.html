@@ -204,6 +204,10 @@
       <div class="dialog-head"><div><h2 id="sessionDialogTitle">Detail události</h2><p id="editorHint">Vyber nebo vytvoř událost.</p></div><button id="sessionClose" type="button">×</button></div>
       <form id="sessionForm" class="editor-form">
         <div class="form-row">
+          <label>Kategorie<select name="teamId"></select></label>
+          <label class="xps-unassigned-hint hidden">Nerozpoznaná XPS událost<input value="Vyber správnou kategorii" disabled /></label>
+        </div>
+        <div class="form-row">
           <label>Datum<input name="date" type="date" /></label>
           <label>Typ<select name="type"></select></label>
         </div>
@@ -246,17 +250,17 @@
     </dialog>
 
     <script src="./config.js?v=148"></script>
-    <script src="./app.js?v=158"></script>
+    <script src="./app.js?v=160"></script>
     <script src="./progress-fix.js?v=148"></script>
     <script src="./phase-model.js?v=150"></script>
     <script src="./team-scope.js?v=150"></script>
-    <script src="./calendar-teams.js?v=156"></script>
+    <script src="./calendar-teams.js?v=160"></script>
     <script src="./training-requirements.js?v=157"></script>
-    <script src="./team-colors.js?v=157"></script>
+    <script src="./team-colors.js?v=160"></script>
     <script src="./players.js?v=148"></script>
     <script src="./matchday.js?v=152"></script>
     <script src="./local-ui-state.js?v=150"></script>
     <script src="./sync-diagnostics.js?v=149"></script>
-    <script src="./xps-ical.js?v=159"></script>
+    <script src="./xps-ical.js?v=160"></script>
   </body>
 </html>

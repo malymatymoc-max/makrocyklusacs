@@ -10,6 +10,7 @@
   }
 
   function teamColor(teamId) {
+    if (teamId === "xps_unassigned") return "#8a9490";
     const index = state.teams.findIndex((team) => team.id === teamId);
     return cleanColor(state.teams[index]?.color, colorForIndex(Math.max(0, index)));
   }

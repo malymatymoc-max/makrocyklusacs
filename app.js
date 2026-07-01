@@ -292,6 +292,9 @@ function renderEditor() {
   }
   updateSessionDialogLabels(s);
   els.hint.textContent = long(new Date(`${s.date}T12:00:00`));
+  els.form.elements.teamId.innerHTML = state.teams.map(option).join("");
+  els.form.elements.teamId.value = s.teamId || "";
+  els.form.querySelector(".xps-unassigned-hint")?.classList.toggle("hidden", !s.xpsUnassigned);
   els.form.elements.date.value = s.date;
   els.form.elements.type.innerHTML = TYPES.map((t) => `<option>${t}</option>`).join("");
   els.form.elements.type.value = s.type;
@@ -444,6 +447,18 @@ function updateSession(event) {
   const s = selectedSession();
   if (!s || !event.target.name) return;
   s[event.target.name] = event.target.value;
+  if (event.target.name === "teamId") {
+    state.selectedTeamId = s.teamId;
+    state.calendarTeamIds = [...new Set([...(Array.isArray(state.calendarTeamIds) ? state.calendarTeamIds : []), s.teamId].filter(Boolean))];
+    s.periodId = typeof periodForTeamDate === "function" ? periodForTeamDate(s.teamId, s.seasonId, s.date)?.id || "" : "";
+    if (s.source === "xps-ical") {
+      s.xpsUnassigned = false;
+      s.xpsCategoryManual = true;
+    }
+    save();
+    render();
+    return;
+  }
   if (event.target.name === "type") {
     if (isMatchSession(s)) clearMacrocycleFields(s);
     save();
