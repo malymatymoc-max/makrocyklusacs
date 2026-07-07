@@ -368,6 +368,7 @@
     const isBenchPick = selectedBenchIndex >= 0;
     if (!isFieldPick && !isBenchPick) return "";
     const currentId = isFieldPick ? matchday.fieldPlayerIds[selectedSlotIndex] : matchday.benchPlayerIds[selectedBenchIndex];
+    if (currentId) return "";
     const targetLabel = isFieldPick ? "pozici na hřišti" : "místo na střídačce";
     return `<div class="roster-picker-backdrop">
       <section class="roster-picker-modal">
