@@ -50,6 +50,15 @@
     return colorDisplay(row, key);
   };
 
+  const colorDisplayCell = window.displayCell;
+  displayCell = function displayCellWithTeamColor(row, key) {
+    if (key === "color") {
+      const value = cleanColor(row.color);
+      return `<span class="team-color-preview"><i style="background:${esc(value)}"></i><span>Barva týmu</span></span>`;
+    }
+    return colorDisplayCell(row, key);
+  };
+
   const colorLabel = window.label;
   label = function labelWithTeamColor(key) {
     if (key === "color") return "Barva";

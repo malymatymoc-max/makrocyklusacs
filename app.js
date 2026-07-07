@@ -438,7 +438,7 @@ function renderSetupTable(key, title, rows, cols) {
   const panel = $(`[data-section="${key}"]`);
   panel.innerHTML = `<div class="panel-header"><div><h2>${title}</h2><p>${rows.length} položek</p></div><button class="mini" data-add="${key}" type="button">+ Přidat</button></div>
     <table><thead><tr>${cols.map((c) => `<th>${label(c)}</th>`).join("")}<th>Akce</th></tr></thead>
-    <tbody>${rows.length ? rows.map((r) => `<tr>${cols.map((c) => `<td>${esc(display(r, c))}</td>`).join("")}<td><div class="row-actions"><button class="mini" data-edit="${key}" data-id="${r.id}" type="button">Upravit</button></div></td></tr>`).join("") : `<tr><td colspan="${cols.length + 1}">Prázdné.</td></tr>`}</tbody></table>`;
+    <tbody>${rows.length ? rows.map((r) => `<tr>${cols.map((c) => `<td>${displayCell(r, c)}</td>`).join("")}<td><div class="row-actions"><button class="mini" data-edit="${key}" data-id="${r.id}" type="button">Upravit</button></div></td></tr>`).join("") : `<tr><td colspan="${cols.length + 1}">Prázdné.</td></tr>`}</tbody></table>`;
   panel.querySelector("[data-add]").addEventListener("click", () => openDialog(entityFromKey(key)));
   panel.querySelectorAll("[data-edit]").forEach((btn) => btn.addEventListener("click", () => openDialog(entityFromKey(btn.dataset.edit), btn.dataset.id)));
 }
@@ -784,6 +784,7 @@ function chip(item, active, key) {
 function option(item) { return `<option value="${item.id}">${esc(item.name)}</option>`; }
 function label(key) { return ({ name: "Název", start: "Od", end: "Do" })[key] || key; }
 function display(row, key) { return key === "start" || key === "end" ? fmt(row[key]) : row[key] || ""; }
+function displayCell(row, key) { return esc(display(row, key)); }
 
 function showView(view) {
   $$(".nav-btn").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
