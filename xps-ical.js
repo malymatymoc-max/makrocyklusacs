@@ -329,10 +329,27 @@
   }
 
   function seasonIdForImportedDate(date) {
-    return state.seasons.find((season) => (!season.start || date >= season.start) && (!season.end || date <= season.end))?.id ||
-      state.selectedSeasonId ||
-      state.seasons[0]?.id ||
-      "";
+    const existing = state.seasons.find((season) => (!season.start || date >= season.start) && (!season.end || date <= season.end));
+    if (existing) return existing.id;
+    return createSeasonForImportedDate(date).id;
+  }
+
+  function createSeasonForImportedDate(date) {
+    const year = Number(String(date || "").slice(0, 4));
+    const month = Number(String(date || "").slice(5, 7));
+    if (!year || !month) return state.seasons[0] || { id: "" };
+    const startYear = month <= 6 ? year - 1 : year;
+    const endYear = startYear + 1;
+    const season = {
+      id: uid("season"),
+      name: `${startYear}/${endYear}`,
+      start: `${startYear}-07-01`,
+      end: `${endYear}-06-30`,
+    };
+    const existing = state.seasons.find((item) => item.name === season.name || (item.start === season.start && item.end === season.end));
+    if (existing) return existing;
+    state.seasons.push(season);
+    return season;
   }
 
   function periodForImportedDate(teamId, seasonId, date) {
