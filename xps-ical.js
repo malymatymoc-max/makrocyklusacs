@@ -47,27 +47,41 @@
     panel.innerHTML = `
       <div class="xps-source-hero">
         <div>
-          <span class="xps-kicker">Jednosměrný import</span>
-          <h2>XPS zdroje kalendáře</h2>
-          <p>Přidej jeden nebo více iCal odkazů. Coach ACS události rozdělí podle názvu, ročníku a data do správných kategorií a sezon.</p>
+          <span class="xps-kicker">Kalendáře z XPS</span>
+          <h2>Napojené kalendáře</h2>
+          <p>Sem přidej odkazy z XPS. Coach ACS je jen čte a události sám roztřídí podle názvu, ročníku a data.</p>
         </div>
-        <button id="syncAllXpsSetup" class="primary" type="button" ${xpsImportBusy || !state.xpsFeeds.length ? "disabled" : ""}>${xpsImportBusy ? "Synchronizuji..." : "Synchronizovat vše"}</button>
+        <div class="xps-hero-actions">
+          <button id="syncAllXpsSetup" class="primary" type="button" ${xpsImportBusy || !state.xpsFeeds.length ? "disabled" : ""}>${xpsImportBusy ? "Aktualizuji..." : "Aktualizovat vše"}</button>
+        </div>
       </div>
-      <form id="xpsImportForm" class="xps-import-form">
-        <label>Název zdroje<input name="name" placeholder="Např. XPS WU9 / sdílený kalendář" /></label>
-        <label>Výchozí kategorie<select name="teamId">${fallbackOptions}</select></label>
-        <label class="xps-url-field">iCal odkaz<input name="url" value="" placeholder="${esc(DEFAULT_XPS_URL)}" required /></label>
-        <div class="xps-import-actions">
-          <button class="primary" type="submit" ${xpsImportBusy ? "disabled" : ""}>${xpsImportBusy ? "Načítám..." : "Přidat a synchronizovat"}</button>
-          <span class="muted">${esc(xpsImportMessage || "Import jen čte iCal. Do XPS se nic nezapisuje.")}</span>
-        </div>
-      </form>
       <div class="xps-source-summary">
         <div><strong>${state.xpsFeeds.length}</strong><span>zdrojů</span></div>
         <div><strong>${xpsImportedSessions().length}</strong><span>importovaných událostí</span></div>
         <div><strong>${xpsUnassignedSessions().length}</strong><span>nezařazených</span></div>
       </div>
-      ${state.xpsFeeds.length ? `<div class="xps-feed-list">${state.xpsFeeds.map((item) => xpsFeedRow(item)).join("")}</div>` : `<div class="xps-empty-source">Zatím není přidaný žádný XPS zdroj.</div>`}
+      <div class="xps-source-body">
+        <form id="xpsImportForm" class="xps-import-form">
+          <div class="xps-form-title">
+            <strong>Přidat kalendář</strong>
+            <span>Stačí vložit odkaz z XPS. Výchozí kategorii vyplň jen tehdy, když ji nepůjde poznat z názvu.</span>
+          </div>
+          <label>Název<input name="name" placeholder="Např. WU9, turnaje, sdílený kalendář" /></label>
+          <label>Výchozí kategorie<select name="teamId">${fallbackOptions}</select></label>
+          <label class="xps-url-field">iCal odkaz<input name="url" value="" placeholder="${esc(DEFAULT_XPS_URL)}" required /></label>
+          <div class="xps-import-actions">
+            <button class="primary" type="submit" ${xpsImportBusy ? "disabled" : ""}>${xpsImportBusy ? "Přidávám..." : "Přidat kalendář"}</button>
+            <span>${esc(xpsImportMessage || "Bezpečné propojení: Coach ACS nic neposílá zpět do XPS.")}</span>
+          </div>
+        </form>
+        <section class="xps-sources-area">
+          <div class="xps-section-title">
+            <strong>Uložené kalendáře</strong>
+            <span>${state.xpsFeeds.length ? "Aktualizují se automaticky při používání aplikace." : "Po přidání se tu zobrazí jako karta."}</span>
+          </div>
+          ${state.xpsFeeds.length ? `<div class="xps-feed-list">${state.xpsFeeds.map((item) => xpsFeedRow(item)).join("")}</div>` : `<div class="xps-empty-source">Zatím není přidaný žádný kalendář.</div>`}
+        </section>
+      </div>
     `;
 
     panel.querySelector("#xpsImportForm")?.addEventListener("submit", async (event) => {
@@ -107,15 +121,26 @@
   function xpsFeedRow(feed) {
     const fallbackTeam = state.teams.find((team) => team.id === feed.teamId)?.name || "Nezařazeno";
     const importedCount = state.sessions.filter((session) => session.source === "xps-ical" && session.sourceFeedId === feed.id).length;
-    return `<div class="xps-feed-row">
+    const unassignedCount = state.sessions.filter((session) => session.source === "xps-ical" && session.sourceFeedId === feed.id && (session.xpsUnassigned || session.teamId === UNASSIGNED_TEAM_ID)).length;
+    return `<article class="xps-feed-card">
       <div class="xps-feed-main">
+        <span class="xps-feed-badge">${feed.lastSyncAt ? "Napojeno" : "Připraveno"}</span>
         <strong>${esc(feed.name || fallbackTeam || "XPS zdroj")}</strong>
         <span>${esc(shortUrl(feed.url))}</span>
-        <small>Výchozí: ${esc(fallbackTeam)} · ${importedCount} událostí${feed.lastSyncAt ? ` · ${esc(lastSyncLabel(feed.lastSyncAt))}` : ""}</small>
       </div>
-      <button data-sync-xps="${feed.id}" type="button">Sync</button>
-      <button class="danger subtle-danger" data-delete-xps="${feed.id}" type="button">Smazat</button>
-    </div>`;
+      <div class="xps-feed-stats">
+        <div><strong>${importedCount}</strong><span>událostí</span></div>
+        <div><strong>${unassignedCount}</strong><span>nezařazených</span></div>
+      </div>
+      <div class="xps-feed-meta">
+        <span>Výchozí: ${esc(fallbackTeam)}</span>
+        <span>${feed.lastSyncAt ? esc(lastSyncLabel(feed.lastSyncAt)) : "Zatím neaktualizováno"}</span>
+      </div>
+      <div class="xps-feed-actions">
+        <button data-sync-xps="${feed.id}" type="button">Aktualizovat</button>
+        <button class="danger subtle-danger" data-delete-xps="${feed.id}" type="button">Smazat</button>
+      </div>
+    </article>`;
   }
 
   async function syncXpsFeed(feed, options = {}) {
