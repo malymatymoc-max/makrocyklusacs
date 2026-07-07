@@ -200,9 +200,25 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); box-shad
 .match-settings { display: grid; gap: 10px; }
 .match-settings .form-row { grid-template-columns: 1fr 1fr; }
 .pitch-card { display: grid; gap: 12px; }
-.pitch { position: relative; min-height: 430px; border-radius: 8px; border: 1px solid rgba(255,255,255,.48); background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.08) 0 13%, transparent 14%), repeating-linear-gradient(90deg, rgba(255,255,255,.035) 0 42px, rgba(0,0,0,.025) 42px 84px), linear-gradient(180deg, #35a765, #0f6f3e); overflow: hidden; box-shadow: inset 0 0 0 3px rgba(255,255,255,.16), inset 0 -28px 48px rgba(0,0,0,.08); }
-.pitch::before { content: ""; position: absolute; inset: 18px; border: 2px solid rgba(255,255,255,.58); border-radius: 8px; }
-.pitch::after { content: ""; position: absolute; left: 50%; top: 50%; width: 96px; height: 96px; border: 2px solid rgba(255,255,255,.52); border-radius: 999px; transform: translate(-50%, -50%); box-shadow: -520px 0 0 -46px rgba(255,255,255,.42), 520px 0 0 -46px rgba(255,255,255,.42); }
+.pitch { position: relative; width: min(100%, 520px); aspect-ratio: 2 / 3; justify-self: center; border-radius: 8px; border: 1px solid rgba(255,255,255,.48); background: repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 44px, rgba(0,0,0,.035) 44px 88px), linear-gradient(180deg, #39b96e 0%, #16854e 48%, #0f6f3e 100%); overflow: hidden; box-shadow: inset 0 0 0 3px rgba(255,255,255,.16), inset 0 -28px 48px rgba(0,0,0,.08); }
+.pitch::before { content: ""; position: absolute; z-index: 0; inset: 20px; border: 2px solid rgba(255,255,255,.68); border-radius: 8px; }
+.pitch::after { content: ""; position: absolute; z-index: 0; left: 50%; top: 50%; width: 27%; aspect-ratio: 1; border: 2px solid rgba(255,255,255,.58); border-radius: 999px; transform: translate(-50%, -50%); }
+.pitch-markings { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.pitch-line, .pitch-box, .pitch-spot, .pitch-goal { position: absolute; display: block; border-color: rgba(255,255,255,.66); pointer-events: none; }
+.pitch-line.halfway { left: 20px; right: 20px; top: 50%; border-top: 2px solid rgba(255,255,255,.62); transform: translateY(-1px); }
+.pitch-box.penalty { left: 21%; width: 58%; height: 18%; border: 2px solid rgba(255,255,255,.62); }
+.pitch-box.penalty.top { top: 20px; border-top: 0; }
+.pitch-box.penalty.bottom { bottom: 20px; border-bottom: 0; }
+.pitch-box.goal-area { left: 34%; width: 32%; height: 8.5%; border: 2px solid rgba(255,255,255,.62); }
+.pitch-box.goal-area.top { top: 20px; border-top: 0; }
+.pitch-box.goal-area.bottom { bottom: 20px; border-bottom: 0; }
+.pitch-spot { left: 50%; width: 6px; height: 6px; border-radius: 999px; background: rgba(255,255,255,.78); transform: translate(-50%, -50%); }
+.pitch-spot.top { top: 14.5%; }
+.pitch-spot.center { top: 50%; }
+.pitch-spot.bottom { top: 85.5%; }
+.pitch-goal { left: 41%; width: 18%; height: 10px; border: 2px solid rgba(255,255,255,.58); background: rgba(255,255,255,.12); }
+.pitch-goal.top { top: 8px; border-bottom: 0; border-radius: 5px 5px 0 0; }
+.pitch-goal.bottom { bottom: 8px; border-top: 0; border-radius: 0 0 5px 5px; }
 .pitch-slot { position: absolute; z-index: 1; left: var(--x); top: var(--y); transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 5px; min-width: 88px; border: 0; background: transparent; color: #fff; text-align: center; }
 .pitch-slot.active .pitch-player { border-color: #ffe08a; box-shadow: 0 0 0 5px rgba(255,224,138,.34), 0 10px 20px rgba(0,0,0,.2); }
 .pitch-slot.active small { font-weight: 900; }
@@ -462,7 +478,7 @@ body.matchday-live-active .topbar { display: none; }
 .live-goal-button.primary { min-height: 58px; font-size: 16px; }
 .live-lineup-card, .live-log-card { border-color: rgba(217,225,223,.9); background: rgba(255,255,255,.96); box-shadow: 0 22px 55px rgba(13,33,28,.12); }
 .live-section-head h2 { font-size: 30px; }
-.pitch { border-radius: 8px; background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.09) 0 13%, transparent 14%), repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 58px, rgba(0,0,0,.035) 58px 116px), linear-gradient(180deg, #3dbd72, #0b713d); box-shadow: inset 0 0 0 4px rgba(255,255,255,.18), inset 0 -34px 58px rgba(0,0,0,.12), 0 22px 46px rgba(0,71,36,.18); }
+.pitch { border-radius: 8px; background: repeating-linear-gradient(90deg, rgba(255,255,255,.055) 0 52px, rgba(0,0,0,.035) 52px 104px), linear-gradient(180deg, #42bd75, #18844d 48%, #0a6a3a); box-shadow: inset 0 0 0 4px rgba(255,255,255,.18), inset 0 -34px 58px rgba(0,0,0,.12), 0 22px 46px rgba(0,71,36,.18); }
 .pitch::before { inset: 22px; border-color: rgba(255,255,255,.66); }
 .pitch-player { background: rgba(255,255,255,.26); box-shadow: 0 12px 24px rgba(0,0,0,.24); }
 .live-pitch .pitch-player { width: 82px; height: 82px; }
@@ -538,8 +554,8 @@ body.matchday-live-active .topbar { display: none; }
 .live-goal-button { min-height: 62px; }
 .match-live-body { grid-template-columns: minmax(0, 1fr) minmax(260px, .28fr); }
 .live-lineup-card { padding: 18px; }
-.live-lineup-grid { grid-template-columns: minmax(0, 1fr) minmax(250px, .32fr); }
-.live-pitch { min-height: min(64vh, 660px); }
+.live-lineup-grid { grid-template-columns: minmax(360px, 560px) minmax(270px, 1fr); justify-content: start; }
+.live-pitch { width: auto; height: min(68vh, 680px); min-height: 560px; max-width: 100%; aspect-ratio: 2 / 3; }
 .live-log-card { position: sticky; top: 14px; }
 .goal-log-row { padding: 10px 0; font-size: 13px; }
 @keyframes cardIn {
@@ -552,6 +568,7 @@ body.matchday-live-active .topbar { display: none; }
   .day { min-height: 0; border-right: 1px solid rgba(217,225,223,.78); border-radius: 8px; }
   .day:first-child, .day:last-child { border-radius: 8px; }
   .match-live-controls, .match-live-body, .live-lineup-grid { grid-template-columns: 1fr; }
+  .live-pitch { justify-self: center; height: min(70vh, 640px); min-height: 520px; }
   .live-log-card { position: static; }
 }
 @media (max-width: 760px) {
@@ -565,4 +582,6 @@ body.matchday-live-active .topbar { display: none; }
   .setup-library-item { grid-template-columns: 1fr; }
   .setup-library-item .mini { width: fit-content; }
   .match-live-screen { background: radial-gradient(circle at 18% 0%, rgba(11,142,77,.32), transparent 30%), linear-gradient(180deg, #061713 0%, #091c24 36%, #eef3f7 36%); }
+  .pitch { width: min(100%, 430px); }
+  .live-pitch { height: min(66vh, 560px); min-height: 460px; }
 }

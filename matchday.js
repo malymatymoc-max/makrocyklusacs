@@ -319,7 +319,20 @@
   }
 
   function pitchSlots(matchday, players, positions) {
-    return positions.map((position, index) => {
+    const markings = `<span class="pitch-markings" aria-hidden="true">
+      <i class="pitch-line halfway"></i>
+      <i class="pitch-line center-circle"></i>
+      <i class="pitch-box penalty top"></i>
+      <i class="pitch-box penalty bottom"></i>
+      <i class="pitch-box goal-area top"></i>
+      <i class="pitch-box goal-area bottom"></i>
+      <i class="pitch-spot top"></i>
+      <i class="pitch-spot center"></i>
+      <i class="pitch-spot bottom"></i>
+      <i class="pitch-goal top"></i>
+      <i class="pitch-goal bottom"></i>
+    </span>`;
+    return markings + positions.map((position, index) => {
       const player = players.find((item) => item.id === matchday.fieldPlayerIds[index]);
       const time = player ? formatClock(playerAreaSeconds(matchday, player.id, "field")) : "";
       return `<button class="pitch-slot ${selectedSlotIndex === index ? "active" : ""}" style="--x:${position.x}%;--y:${position.y}%" data-slot="${index}" type="button">
