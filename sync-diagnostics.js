@@ -56,7 +56,7 @@
       if (remoteStore.state && typeof normalizeState === "function") {
         remoteEnabled = true;
         syncProvider = "supabase";
-        remoteUpdatedAt = remoteStore.updated_at || new Date().toISOString();
+        remoteUpdatedAt = Date.parse(remoteStore.updated_at || "") || Date.now();
         applyingRemote = true;
         state = normalizeState(remoteStore.state);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -68,10 +68,12 @@
       }
 
       status("Sdíleno přes Supabase", "online");
+      if (typeof setEditLocked === "function") setEditLocked(false);
       console.info("[Makrocyklus sync] Supabase connection OK");
     } catch (error) {
       const message = error && error.message ? error.message : String(error);
-      status(`Supabase chyba: ${message.slice(0, 80)}`);
+      status("Offline - pouze čtení");
+      if (typeof showOfflineGuard === "function") showOfflineGuard(`Supabase se nepodařilo načíst: ${message.slice(0, 80)}`);
       console.error("[Makrocyklus sync] Supabase connection failed", error);
     }
   }

@@ -10,7 +10,7 @@
     <title>Coach ACS</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=169" />
+    <link rel="stylesheet" href="./styles.css?v=170" />
     <style>
       .topbar { grid-template-columns: minmax(260px, 1.4fr) minmax(160px, .8fr) auto auto auto; }
       .team-picker-label { min-width: 0; }
@@ -74,6 +74,10 @@
       </aside>
 
       <main class="main">
+        <div id="offlineGuard" class="offline-guard hidden" role="status">
+          <strong>Úpravy jsou dočasně zamčené</strong>
+          <span>Aplikace čeká na připojení k online datům. Bez synchronizace můžeš data jen prohlížet.</span>
+        </div>
         <header class="topbar">
           <label class="team-picker-label">Kategorie<select id="teamSelect" class="legacy-team-select"></select><div id="teamMultiSelect" class="team-multi"></div></label>
           <label>Sezóna<select id="seasonSelect"></select></label>
@@ -250,7 +254,7 @@
     </dialog>
 
     <script src="./config.js?v=148"></script>
-    <script src="./app.js?v=162"></script>
+    <script src="./app.js?v=163"></script>
     <script src="./progress-fix.js?v=148"></script>
     <script src="./phase-model.js?v=150"></script>
     <script src="./team-scope.js?v=150"></script>
@@ -260,7 +264,7 @@
     <script src="./players.js?v=148"></script>
     <script src="./matchday.js?v=154"></script>
     <script src="./local-ui-state.js?v=150"></script>
-    <script src="./sync-diagnostics.js?v=149"></script>
+    <script src="./sync-diagnostics.js?v=150"></script>
     <script src="./xps-ical.js?v=164"></script>
   </body>
 </html>

@@ -22,6 +22,7 @@ let applyingRemote = false;
 let saveTimer = 0;
 let syncProvider = "local";
 let appStarted = false;
+let editLocked = true;
 
 const els = {
   team: $("#teamSelect"),
@@ -42,6 +43,7 @@ const els = {
   ratingTitle: $("#ratingBlockTitle"),
   stats: $("#progressStrip"),
   syncStatus: $("#syncStatus"),
+  offlineGuard: $("#offlineGuard"),
   scope: $("#fulfillmentScope"),
   fulfillment: $("#fulfillmentGrid"),
   dialogEl: $("#dialog"),
@@ -122,6 +124,18 @@ async function sha256(value) {
 }
 
 function bind() {
+  document.addEventListener("click", guardOfflineEdit, true);
+  document.addEventListener("submit", guardOfflineEdit, true);
+  document.addEventListener("input", guardOfflineEdit, true);
+  document.addEventListener("change", guardOfflineEdit, true);
+  window.addEventListener("offline", () => {
+    remoteEnabled = false;
+    setSyncStatus("Offline - pouze čtení");
+    showOfflineGuard("Zařízení je offline. Úpravy jsou pozastavené, aby se nepřepsala online data.");
+  });
+  window.addEventListener("online", () => {
+    if (window.COACH_ACS_UNLOCKED) startSync();
+  });
   $$(".nav-btn").forEach((btn) => btn.addEventListener("click", () => showView(btn.dataset.view)));
   $("#prevWeek").addEventListener("click", () => {
     weekStart = addDays(weekStart, -7);
@@ -202,6 +216,7 @@ function render() {
   renderFulfillmentScope();
   renderFulfillment();
   renderSetup();
+  applyEditLockControls();
 }
 
 function renderSelectors() {
@@ -879,8 +894,13 @@ function blank() {
   return { teams: [], seasons: [], periods: [], goals: [], details: [], sessions: [], players: [], matchdays: [], xpsFeeds: [], selectedTeamId: "", selectedSeasonId: "", selectedPeriodId: "all" };
 }
 function save() {
+  if (editLocked && !applyingRemote) {
+    showOfflineGuard("Úpravy nejsou uložené. Nejdřív obnov online synchronizaci.");
+    return false;
+  }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   if (remoteEnabled && !applyingRemote) queueRemoteSave();
+  return true;
 }
 function setSyncStatus(text, mode = "") {
   if (!els.syncStatus) return;
@@ -889,7 +909,69 @@ function setSyncStatus(text, mode = "") {
   els.syncStatus.setAttribute("aria-label", text);
   els.syncStatus.className = `sync-status ${mode}`.trim();
 }
+function setEditLocked(locked, message = "") {
+  editLocked = Boolean(locked);
+  document.body.classList.toggle("offline-edit-locked", editLocked);
+  if (els.offlineGuard) {
+    els.offlineGuard.classList.toggle("hidden", !editLocked);
+    if (message) els.offlineGuard.querySelector("span").textContent = message;
+  }
+  applyEditLockControls();
+}
+function showOfflineGuard(message) {
+  setEditLocked(true, message || "Aplikace není připojená k online datům. Úpravy jsou pozastavené, aby se nepřepsala aktuální verze.");
+}
+function isReadOnlyAllowed(target) {
+  return Boolean(target.closest([
+    ".nav-btn",
+    "#prevWeek",
+    "#nextWeek",
+    "#todayBtn",
+    "#prevMonth",
+    "#nextMonth",
+    "[data-month-date]",
+    "[data-session]",
+    "[data-match-session]",
+    "[data-view]",
+    "#sessionClose",
+    "#sessionDone",
+    "#dialogClose",
+    "#dialogCancel",
+    "#newSessionClose",
+    "#newSessionCancel",
+    "#logoutDevice",
+    "#authForm",
+  ].join(",")));
+}
+function guardOfflineEdit(event) {
+  if (!editLocked || applyingRemote) return;
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  if (isReadOnlyAllowed(target)) return;
+  if (["click", "submit", "input", "change"].includes(event.type) && target.closest("button,input,select,textarea,form,label")) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    showOfflineGuard();
+  }
+}
+function applyEditLockControls() {
+  if (editLocked) {
+    document.querySelectorAll("input, select, textarea, button").forEach((control) => {
+      if (control.closest("#authForm") || isReadOnlyAllowed(control)) return;
+      if (!control.disabled) {
+        control.dataset.offlineDisabled = "1";
+        control.disabled = true;
+      }
+    });
+    return;
+  }
+  document.querySelectorAll("[data-offline-disabled='1']").forEach((control) => {
+    control.disabled = false;
+    delete control.dataset.offlineDisabled;
+  });
+}
 async function startSync() {
+  setEditLocked(true, "Načítám poslední online verzi dat. Úpravy se povolí až po úspěšné synchronizaci.");
   try {
     const store = await fetchRemoteState();
     remoteEnabled = true;
@@ -902,10 +984,12 @@ async function startSync() {
       render();
     }
     setSyncStatus(syncProvider === "supabase" ? "Sdíleno přes Supabase" : "Sdíleno online", "online");
+    setEditLocked(false);
     window.setInterval(pollRemoteState, 2000);
   } catch {
     remoteEnabled = false;
-    setSyncStatus("Lokální režim");
+    setSyncStatus("Offline - pouze čtení");
+    showOfflineGuard("Nepodařilo se načíst online data. Připoj internet a aktualizuj stránku, aby šlo bezpečně upravovat.");
   }
 }
 async function fetchRemoteState() {
@@ -934,9 +1018,11 @@ async function pollRemoteState() {
       render();
     }
     setSyncStatus(syncProvider === "supabase" ? "Sdíleno přes Supabase" : "Sdíleno online", "online");
+    setEditLocked(false);
   } catch {
     remoteEnabled = false;
-    setSyncStatus("Lokální režim");
+    setSyncStatus("Offline - pouze čtení");
+    showOfflineGuard("Spojení se synchronizací vypadlo. Úpravy jsou pozastavené, aby se nepřepsala aktuální online verze.");
   }
 }
 function queueRemoteSave() {
@@ -964,7 +1050,8 @@ async function pushRemoteState() {
     setSyncStatus("Sdíleno online", "online");
   } catch {
     remoteEnabled = false;
-    setSyncStatus("Lokální režim");
+    setSyncStatus("Offline - pouze čtení");
+    showOfflineGuard("Uložení se nepodařilo. Úpravy jsou pozastavené, dokud se znovu nenačtou online data.");
   }
 }
 async function fetchSupabaseState() {

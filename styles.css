@@ -47,6 +47,19 @@ body:not(.auth-locked) .auth-gate { display: none; }
 .quick-actions button { padding: 0; min-height: 34px; }
 
 .main { min-width: 0; }
+.offline-guard { position: sticky; top: 0; z-index: 9; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; padding: 10px 22px; border-bottom: 1px solid rgba(217,145,22,.26); background: #fff7e6; color: #664400; box-shadow: 0 10px 24px rgba(102,68,0,.08); }
+.offline-guard strong { font-size: 13px; }
+.offline-guard span { font-size: 12px; font-weight: 750; }
+.offline-edit-locked .primary,
+.offline-edit-locked .danger,
+.offline-edit-locked [data-add],
+.offline-edit-locked [data-edit],
+.offline-edit-locked [data-new-on],
+.offline-edit-locked #newSession,
+.offline-edit-locked #quickSession,
+.offline-edit-locked #dialogSave,
+.offline-edit-locked #deleteSession,
+.offline-edit-locked #deleteSeries { filter: grayscale(.35); opacity: .62; cursor: not-allowed; }
 .topbar { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: minmax(260px, 1.4fr) minmax(160px, .8fr) auto auto auto; gap: 12px; align-items: end; padding: 16px 18px; border-bottom: 1px solid var(--line); background: rgba(244,246,244,.96); backdrop-filter: blur(12px); }
 label { display: grid; gap: 6px; color: #35463f; font-size: 12px; font-weight: 800; }
 input, select, textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--text); outline: 0; }
