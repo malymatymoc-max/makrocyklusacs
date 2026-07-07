@@ -224,11 +224,19 @@ function renderCalendar() {
       const key = dateKey(day);
       const daySessions = visibleSessions().filter((s) => sessionOccursOn(s, key));
       return `<article class="day" data-date="${key}" title="Dvojklikem vytvoříš novou událost">
-        <div class="day-head">${weekday(day)}<span>${long(day)}</span></div>
-        <div class="day-events">${daySessions.length ? daySessions.map(sessionCard).join("") : `<div class="empty-day">Bez události<span>Dvojklik pro přidání</span></div>`}</div>
+        <div class="day-head">
+          <div><strong>${weekday(day)}</strong><span>${long(day)}</span></div>
+          <button class="day-add" data-new-on="${key}" type="button" aria-label="Přidat událost">+</button>
+          ${daySessions.length ? `<em>${daySessions.length}</em>` : ""}
+        </div>
+        <div class="day-events">${daySessions.length ? daySessions.map(sessionCard).join("") : `<div class="empty-day">Volno<span>Dvojklik nebo + pro přidání</span></div>`}</div>
       </article>`;
     })
     .join("");
+  $$("[data-new-on]").forEach((btn) => btn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openNewSessionDialog(btn.dataset.newOn);
+  }));
   $$(".day").forEach((day) => day.addEventListener("dblclick", (event) => {
     if (event.target.closest("[data-session]")) return;
     openNewSessionDialog(day.dataset.date);
@@ -268,7 +276,9 @@ function renderMonth() {
 function sessionCard(s) {
   const klass = ["Utkání", "Turnaj"].includes(s.type) ? "match" : "";
   return `<button class="event ${klass} ${s.id === selectedSessionId ? "active" : ""}" data-session="${s.id}" type="button">
-    <strong>${esc(sessionCalendarTitle(s))}</strong>
+    <span class="event-kind">${esc(s.type || "Událost")}</span>
+    <strong><span class="event-title">${esc(sessionCalendarTitle(s))}</span></strong>
+    <span class="event-meta">${esc(sessionMetaLine(s))}</span>
   </button>`;
 }
 
@@ -436,11 +446,37 @@ function renderSetup() {
 
 function renderSetupTable(key, title, rows, cols) {
   const panel = $(`[data-section="${key}"]`);
-  panel.innerHTML = `<div class="panel-header"><div><h2>${title}</h2><p>${rows.length} položek</p></div><button class="mini" data-add="${key}" type="button">+ Přidat</button></div>
-    <table><thead><tr>${cols.map((c) => `<th>${label(c)}</th>`).join("")}<th>Akce</th></tr></thead>
-    <tbody>${rows.length ? rows.map((r) => `<tr>${cols.map((c) => `<td>${displayCell(r, c)}</td>`).join("")}<td><div class="row-actions"><button class="mini" data-edit="${key}" data-id="${r.id}" type="button">Upravit</button></div></td></tr>`).join("") : `<tr><td colspan="${cols.length + 1}">Prázdné.</td></tr>`}</tbody></table>`;
+  panel.innerHTML = `<div class="panel-header setup-library-head"><div><h2>${title}</h2><p>${setupDescription(key, rows.length)}</p></div><button class="mini" data-add="${key}" type="button">+ Přidat</button></div>
+    <div class="setup-library-list">${rows.length ? rows.map((row) => setupLibraryItem(key, row, cols)).join("") : `<div class="setup-empty">Zatím prázdné.<span>Přidej první položku tlačítkem nahoře.</span></div>`}</div>`;
   panel.querySelector("[data-add]").addEventListener("click", () => openDialog(entityFromKey(key)));
   panel.querySelectorAll("[data-edit]").forEach((btn) => btn.addEventListener("click", () => openDialog(entityFromKey(btn.dataset.edit), btn.dataset.id)));
+}
+
+function setupLibraryItem(key, row, cols) {
+  const primaryKey = cols[0] || "name";
+  const primary = display(row, primaryKey) || row.name || "Bez názvu";
+  const meta = cols.slice(1).map((col) => {
+    const value = displayCell(row, col);
+    return value ? `<span><b>${esc(label(col))}</b>${value}</span>` : "";
+  }).filter(Boolean).join("");
+  return `<article class="setup-library-item">
+    <div class="setup-library-main">
+      <strong>${esc(primary)}</strong>
+      ${meta ? `<div class="setup-library-meta">${meta}</div>` : ""}
+    </div>
+    <button class="mini" data-edit="${key}" data-id="${row.id}" type="button">Upravit</button>
+  </article>`;
+}
+
+function setupDescription(key, count) {
+  const text = {
+    teams: "Kategorie a jejich barvy",
+    seasons: "Společné sezony aplikace",
+    periods: "Fáze podle data v sezoně",
+    goals: "Cíle nabízené do TJ",
+    details: "Detaily a herní prvky",
+  }[key] || "Knihovna aplikace";
+  return `${count} položek · ${text}`;
 }
 
 function updateSession(event) {
@@ -817,6 +853,16 @@ function sessionCalendarTitle(session) {
   const name = session?.sourceSummary || session?.title || "";
   const prefix = session?.startTime ? `${session.startTime} ` : "";
   return name || `${prefix}${session?.type || "Událost"}`;
+}
+function sessionTeamName(session) {
+  return state.teams.find((item) => item.id === session?.teamId)?.name || "Bez týmu";
+}
+function sessionMetaLine(session) {
+  return [
+    session?.startTime || "",
+    sessionTeamName(session),
+    session?.place || "",
+  ].filter(Boolean).join(" · ");
 }
 function ensureSelection() {
   state = migrateGlobalSeasons(state);

@@ -119,7 +119,9 @@
   sessionCard = function sessionCardWithWarnings(session) {
     const klass = ["Utkání", "Turnaj"].includes(session.type) ? "match" : "";
     return `<button class="event ${klass} ${session.id === selectedSessionId ? "active" : ""}" data-session="${session.id}" type="button">
+      <span class="event-kind">${esc(session.type || "Událost")}</span>
       <strong><span class="event-title">${esc(sessionCalendarTitle(session))}</span>${warningBadges(session)}</strong>
+      <span class="event-meta">${esc(sessionMetaLine(session))}</span>
     </button>`;
   };
 

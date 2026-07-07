@@ -26,7 +26,9 @@ function sessionCard(s) {
   const teamName = state.teams.find((team) => team.id === s.teamId)?.name || "Tým";
   const klass = ["Utkání", "Turnaj"].includes(s.type) ? "match" : "";
   return `<button class="event ${klass} ${s.id === selectedSessionId ? "active" : ""}" data-session="${s.id}" title="${esc(teamName)}" type="button">
-    <strong>${esc(sessionCalendarTitle(s))}</strong>
+    <span class="event-kind">${esc(s.type || "Událost")}</span>
+    <strong><span class="event-title">${esc(sessionCalendarTitle(s))}</span></strong>
+    <span class="event-meta">${esc(sessionMetaLine(s))}</span>
   </button>`;
 }
 
@@ -100,11 +102,19 @@ function renderCalendar() {
       const key = dateKey(day);
       const daySessions = visibleSessions().filter((s) => sessionOccursOn(s, key));
       return `<article class="day" data-date="${key}" title="Dvojklikem vytvoříš novou událost">
-        <div class="day-head">${weekday(day)}<span>${long(day)}</span></div>
-        <div class="day-events">${daySessions.length ? daySessions.map(sessionCard).join("") : `<div class="empty-day">Bez události<span>Dvojklik pro přidání</span></div>`}</div>
+        <div class="day-head">
+          <div><strong>${weekday(day)}</strong><span>${long(day)}</span></div>
+          <button class="day-add" data-new-on="${key}" type="button" aria-label="Přidat událost">+</button>
+          ${daySessions.length ? `<em>${daySessions.length}</em>` : ""}
+        </div>
+        <div class="day-events">${daySessions.length ? daySessions.map(sessionCard).join("") : `<div class="empty-day">Volno<span>Dvojklik nebo + pro přidání</span></div>`}</div>
       </article>`;
     })
     .join("");
+  $$("[data-new-on]").forEach((btn) => btn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openNewSessionDialog(btn.dataset.newOn);
+  }));
   $$(".day").forEach((day) => day.addEventListener("dblclick", (event) => {
     if (event.target.closest("[data-session]")) return;
     openNewSessionDialog(day.dataset.date);
