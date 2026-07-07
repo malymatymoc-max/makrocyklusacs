@@ -11,6 +11,7 @@
       ...nextState,
       xpsFeeds: Array.isArray(nextState.xpsFeeds) ? nextState.xpsFeeds.map((feed) => ({
         id: feed.id || uid("xps"),
+        name: feed.name || "",
         teamId: feed.teamId || "",
         url: feed.url || "",
         lastSyncAt: feed.lastSyncAt || "",
@@ -42,31 +43,48 @@
     state = normalizeXpsState(state);
     const panel = document.querySelector("[data-section='xps']");
     if (!panel) return;
-    const defaultTeamId = state.selectedTeamId || state.teams[0]?.id || "";
-    const feed = state.xpsFeeds[0] || {};
+    const fallbackOptions = `<option value="">Nezařazeno, pokud nepůjde poznat</option>${state.teams.filter((team) => team.id !== UNASSIGNED_TEAM_ID).map(option).join("")}`;
     panel.innerHTML = `
-      <div class="setup-head">
-        <div><h2>XPS iCal import</h2><p>Jednosměrné načtení událostí z XPS/Google kalendáře do Coach ACS. Aplikace je sama zkontroluje zhruba dvakrát denně při používání.</p></div>
+      <div class="xps-source-hero">
+        <div>
+          <span class="xps-kicker">Jednosměrný import</span>
+          <h2>XPS zdroje kalendáře</h2>
+          <p>Přidej jeden nebo více iCal odkazů. Coach ACS události rozdělí podle názvu, ročníku a data do správných kategorií a sezon.</p>
+        </div>
         <button id="syncAllXpsSetup" class="primary" type="button" ${xpsImportBusy || !state.xpsFeeds.length ? "disabled" : ""}>${xpsImportBusy ? "Synchronizuji..." : "Synchronizovat vše"}</button>
       </div>
       <form id="xpsImportForm" class="xps-import-form">
-        <label>Kategorie<select name="teamId" required>${state.teams.map((team) => `<option value="${team.id}" ${(feed.teamId || defaultTeamId) === team.id ? "selected" : ""}>${esc(team.name)}</option>`).join("")}</select></label>
-        <label>iCal odkaz<input name="url" value="${esc(feed.url || DEFAULT_XPS_URL)}" placeholder="webcal://..." required /></label>
+        <label>Název zdroje<input name="name" placeholder="Např. XPS WU9 / sdílený kalendář" /></label>
+        <label>Výchozí kategorie<select name="teamId">${fallbackOptions}</select></label>
+        <label class="xps-url-field">iCal odkaz<input name="url" value="" placeholder="${esc(DEFAULT_XPS_URL)}" required /></label>
         <div class="xps-import-actions">
-          <button class="primary" type="submit" ${xpsImportBusy ? "disabled" : ""}>${xpsImportBusy ? "Načítám..." : "Synchronizovat XPS kalendář"}</button>
-          <span class="muted">${esc(xpsImportMessage || feed.lastResult || "Import jen čte iCal. Do XPS se nic nezapisuje.")}</span>
+          <button class="primary" type="submit" ${xpsImportBusy ? "disabled" : ""}>${xpsImportBusy ? "Načítám..." : "Přidat a synchronizovat"}</button>
+          <span class="muted">${esc(xpsImportMessage || "Import jen čte iCal. Do XPS se nic nezapisuje.")}</span>
         </div>
       </form>
-      ${state.xpsFeeds.length ? `<div class="xps-feed-list">${state.xpsFeeds.map((item) => xpsFeedRow(item)).join("")}</div>` : ""}
+      <div class="xps-source-summary">
+        <div><strong>${state.xpsFeeds.length}</strong><span>zdrojů</span></div>
+        <div><strong>${xpsImportedSessions().length}</strong><span>importovaných událostí</span></div>
+        <div><strong>${xpsUnassignedSessions().length}</strong><span>nezařazených</span></div>
+      </div>
+      ${state.xpsFeeds.length ? `<div class="xps-feed-list">${state.xpsFeeds.map((item) => xpsFeedRow(item)).join("")}</div>` : `<div class="xps-empty-source">Zatím není přidaný žádný XPS zdroj.</div>`}
     `;
 
     panel.querySelector("#xpsImportForm")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+      const url = normalizeCalendarUrl(data.url || DEFAULT_XPS_URL);
+      const existing = state.xpsFeeds.find((item) => normalizeCalendarUrl(item.url) === url);
+      if (existing) {
+        xpsImportMessage = "Tenhle XPS zdroj už je uložený. Synchronizuji existující zdroj.";
+        await syncXpsFeed(existing);
+        return;
+      }
       await syncXpsFeed({
-        ...(state.xpsFeeds[0] || { id: uid("xps") }),
+        id: uid("xps"),
+        name: data.name || "",
         teamId: data.teamId,
-        url: data.url,
+        url,
       });
     });
 
@@ -87,10 +105,15 @@
   }
 
   function xpsFeedRow(feed) {
-    const teamName = state.teams.find((team) => team.id === feed.teamId)?.name || "Bez týmu";
+    const fallbackTeam = state.teams.find((team) => team.id === feed.teamId)?.name || "Nezařazeno";
+    const importedCount = state.sessions.filter((session) => session.source === "xps-ical" && session.sourceFeedId === feed.id).length;
     return `<div class="xps-feed-row">
-      <div><strong>${esc(teamName)}</strong><span>${esc(shortUrl(feed.url))}</span></div>
-      <button data-sync-xps="${feed.id}" type="button">Synchronizovat</button>
+      <div class="xps-feed-main">
+        <strong>${esc(feed.name || fallbackTeam || "XPS zdroj")}</strong>
+        <span>${esc(shortUrl(feed.url))}</span>
+        <small>Výchozí: ${esc(fallbackTeam)} · ${importedCount} událostí${feed.lastSyncAt ? ` · ${esc(lastSyncLabel(feed.lastSyncAt))}` : ""}</small>
+      </div>
+      <button data-sync-xps="${feed.id}" type="button">Sync</button>
       <button class="danger subtle-danger" data-delete-xps="${feed.id}" type="button">Smazat</button>
     </div>`;
   }
@@ -133,7 +156,7 @@
 
   async function syncAllXpsFeeds(options = {}) {
     state = normalizeXpsState(state);
-    const feeds = state.xpsFeeds.filter((feed) => feed.teamId && feed.url);
+    const feeds = state.xpsFeeds.filter((feed) => feed.url);
     if (!feeds.length || xpsImportBusy) {
       if (!feeds.length) xpsImportMessage = "Nejdřív přidej alespoň jeden iCal odkaz.";
       renderXpsImport();
@@ -247,7 +270,8 @@
     const endDate = calendarDisplayEndDate(start.date, end.date, event.endAllDay);
     const seasonId = seasonIdForImportedDate(start.date);
     const detectedTeam = detectTeamForEvent(event);
-    const teamId = detectedTeam?.id || ensureUnassignedTeam().id;
+    const fallbackTeam = state.teams.find((team) => team.id === feed.teamId && team.id !== UNASSIGNED_TEAM_ID);
+    const teamId = detectedTeam?.id || fallbackTeam?.id || ensureUnassignedTeam().id;
     return {
       id: uid("session"),
       teamId,
@@ -274,8 +298,8 @@
       sourceCalendarUrl: normalizeCalendarUrl(feed.url),
       sourceSummary: event.summary || "",
       sourceLastModified: event.lastModified || "",
-      xpsDetectedCategory: detectedTeam?.name || "",
-      xpsUnassigned: !detectedTeam,
+      xpsDetectedCategory: detectedTeam?.name || fallbackTeam?.name || "",
+      xpsUnassigned: !detectedTeam && !fallbackTeam,
       xpsCategoryManual: false,
     };
   }
@@ -436,6 +460,19 @@
     return url.replace(/^https:\/\/calendar\.google\.com\/calendar\/ical\//, "Google Calendar / ");
   }
 
+  function lastSyncLabel(value) {
+    const time = Date.parse(value || "");
+    return time ? `naposledy ${new Intl.DateTimeFormat("cs-CZ", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }).format(time)}` : "";
+  }
+
+  function xpsImportedSessions() {
+    return state.sessions.filter((session) => session.source === "xps-ical");
+  }
+
+  function xpsUnassignedSessions() {
+    return xpsImportedSessions().filter((session) => session.xpsUnassigned || session.teamId === UNASSIGNED_TEAM_ID);
+  }
+
   window.inferXpsEventType = inferEventType;
 
   function updateQuickSyncButton(isBusy = xpsImportBusy) {
@@ -446,7 +483,7 @@
   }
 
   function needsAutoSync(feed) {
-    if (!feed?.teamId || !feed?.url) return false;
+    if (!feed?.url) return false;
     const lastSync = Date.parse(feed.lastSyncAt || "");
     return !lastSync || Date.now() - lastSync >= AUTO_SYNC_INTERVAL_MS;
   }
