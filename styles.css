@@ -385,3 +385,101 @@ dialog::backdrop { background: rgba(6,63,47,.34); }
   .live-lineup-card, .live-log-card { padding: 10px; }
   .goal-picker-list { grid-template-columns: 1fr; }
 }
+
+/* Modern visual refresh */
+:root {
+  --bg: #f6f8fb;
+  --surface: rgba(255,255,255,.94);
+  --line: #d9e1df;
+  --soft: #edf7f1;
+  --text: #101b17;
+  --muted: #66746f;
+  --green: #008a46;
+  --green-dark: #073f30;
+  --blue: #2563eb;
+  --amber: #d99116;
+  --red: #d33f49;
+  --shadow: 0 18px 42px rgba(12, 30, 24, .08);
+}
+body { background: linear-gradient(180deg, #f8fafc 0, #eef4f1 100%); }
+.app { background: linear-gradient(180deg, rgba(255,255,255,.52), rgba(255,255,255,0)); }
+.sidebar { padding: 18px 12px; background: linear-gradient(180deg, #082f26 0%, #061c19 100%); box-shadow: inset -1px 0 0 rgba(255,255,255,.08), 16px 0 42px rgba(6,31,25,.12); }
+.brand { padding: 8px; border-radius: 8px; background: rgba(255,255,255,.06); }
+.brand-icon { border: 0; background: rgba(255,255,255,.12); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); }
+.nav { gap: 6px; }
+.nav-btn, .quick-actions button { border-radius: 8px; color: rgba(255,255,255,.72); transition: background .16s ease, color .16s ease, transform .16s ease; }
+.nav-btn:hover, .quick-actions button:hover { background: rgba(255,255,255,.08); color: #fff; }
+.nav-btn.active { background: #fff; color: var(--green-dark); box-shadow: 0 10px 24px rgba(0,0,0,.18); }
+.quick-actions { border-top-color: rgba(255,255,255,.1); }
+.topbar { padding: 18px 22px; border-bottom-color: rgba(217,225,223,.74); background: rgba(248,250,252,.82); backdrop-filter: blur(18px) saturate(1.18); box-shadow: 0 10px 30px rgba(13, 33, 28, .05); }
+label { color: #31413b; letter-spacing: 0; }
+input, select, textarea, .team-multi, .inline-check { border-color: #d8e1de; background: rgba(255,255,255,.92); box-shadow: inset 0 1px 0 rgba(255,255,255,.78); }
+input, select { min-height: 40px; }
+input:focus, select:focus, textarea:focus { border-color: rgba(0,138,70,.54); box-shadow: 0 0 0 4px rgba(0,138,70,.12); }
+.primary, .secondary, .danger, .icon-btn, .mini, .chooser-title button, .dashboard-tabs button, .timer-actions button, .live-clock-actions button, .live-shot-control button, .live-goal-button { transition: transform .14s ease, box-shadow .14s ease, background .14s ease, border-color .14s ease; }
+.primary:hover, .secondary:hover, .danger:hover, .icon-btn:hover, .mini:hover, .chooser-title button:hover, .dashboard-tabs button:hover, .timer-actions button:hover, .live-clock-actions button:hover, .live-shot-control button:hover, .live-goal-button:hover { transform: translateY(-1px); }
+.primary { background: linear-gradient(180deg, #05a85a, var(--green)); border-color: transparent; box-shadow: 0 12px 26px rgba(0,138,70,.24); }
+.secondary, .icon-btn, .mini { background: rgba(255,255,255,.9); border-color: #d9e1df; box-shadow: 0 6px 18px rgba(13,33,28,.05); }
+.danger { box-shadow: 0 8px 20px rgba(211,63,73,.08); }
+.sync-status { border-radius: 999px; }
+.view { padding: 22px; }
+.panel, .stat, .circle-card, .team-roster-card, .player-card, .match-card, .chooser-block, .rating-block, .check-list, .dashboard-switcher, .live-lineup-card, .live-log-card, .xps-import-form, .xps-sources-area { border-color: rgba(217,225,223,.82); background: rgba(255,255,255,.88); box-shadow: var(--shadow); }
+.panel-header { background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(249,251,250,.92)); }
+.panel-header h1, .panel-header h2 { letter-spacing: 0; }
+.calendar-board, .calendar-layout, .matchday-layout { gap: 18px; }
+.calendar-grid { min-height: 318px; background: #fff; }
+.day { background: linear-gradient(180deg, #fff, #fbfdfc); }
+.day:hover { background: #f4faf7; }
+.day-head { background: rgba(248,250,252,.72); }
+.event { border-color: rgba(217,225,223,.92); background: rgba(255,255,255,.94); box-shadow: 0 8px 20px rgba(13,33,28,.05); transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease; }
+.event:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(13,33,28,.09); }
+.event.active { border-color: rgba(0,138,70,.34); box-shadow: 0 0 0 4px rgba(0,138,70,.11), 0 12px 28px rgba(13,33,28,.08); }
+.month-day { background: rgba(255,255,255,.92); }
+.month-day.week-mark { border-color: rgba(37,99,235,.28); background: #edf5ff; color: #163b7a; }
+.team-pill, .team-filter-item, .chip, .bench-slot, .player-pick { background: rgba(255,255,255,.9); }
+.team-pill.active, .chip.active, .dashboard-tabs button.active { background: #eaf8f0; border-color: rgba(0,138,70,.28); color: var(--green-dark); }
+.circle { box-shadow: inset 0 0 0 1px rgba(13,33,28,.08); }
+.team-roster-head, .team-filter, .matchday-list-tabs, .live-bench, .muted { background: #f7faf8; }
+
+body.matchday-live-active { background: #07140f; }
+body.matchday-live-active .topbar { display: none; }
+.match-live-screen { gap: 16px; padding: 18px; background: linear-gradient(180deg, #061b17 0%, #0a1b22 54%, #eef3f7 54%); }
+.match-live-toolbar { padding: 4px 2px; }
+.live-back, .live-report-button { border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.94); box-shadow: 0 12px 28px rgba(0,0,0,.16); }
+.live-match-title h1 { color: #fff; }
+.live-match-title p { color: rgba(255,255,255,.68); }
+.match-live-controls { gap: 14px; }
+.live-control-card { min-height: 174px; border-color: rgba(255,255,255,.13); background: rgba(255,255,255,.96); box-shadow: 0 24px 60px rgba(0,0,0,.2); }
+.live-score-card { background: linear-gradient(180deg, #ffffff, #f5faf7); }
+.live-score-card strong { font-size: clamp(64px, 9vw, 104px); letter-spacing: 0; }
+.live-clock-card { background: linear-gradient(180deg, #10251f, #061713); color: #fff; }
+.live-clock-card > span, .live-clock-card strong { color: #fff; }
+.live-clock-card > span { opacity: .72; }
+.live-clock-card strong { font-size: clamp(68px, 8vw, 108px); }
+.live-clock-actions .primary { background: #fff; color: var(--green-dark); box-shadow: 0 12px 28px rgba(0,0,0,.24); }
+.live-clock-actions .secondary { background: rgba(255,255,255,.13); border-color: rgba(255,255,255,.18); color: #fff; box-shadow: none; }
+.live-shots-card, .live-goals-card { background: linear-gradient(180deg, #fff, #f7faf8); }
+.live-goal-button.primary { min-height: 58px; font-size: 16px; }
+.live-lineup-card, .live-log-card { border-color: rgba(217,225,223,.9); background: rgba(255,255,255,.96); box-shadow: 0 22px 55px rgba(13,33,28,.12); }
+.live-section-head h2 { font-size: 30px; }
+.pitch { border-radius: 8px; background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.09) 0 13%, transparent 14%), repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 58px, rgba(0,0,0,.035) 58px 116px), linear-gradient(180deg, #3dbd72, #0b713d); box-shadow: inset 0 0 0 4px rgba(255,255,255,.18), inset 0 -34px 58px rgba(0,0,0,.12), 0 22px 46px rgba(0,71,36,.18); }
+.pitch::before { inset: 22px; border-color: rgba(255,255,255,.66); }
+.pitch-player { background: rgba(255,255,255,.26); box-shadow: 0 12px 24px rgba(0,0,0,.24); }
+.live-pitch .pitch-player { width: 82px; height: 82px; }
+.player-time { background: rgba(5,30,23,.9); }
+.bench-slot { box-shadow: 0 8px 20px rgba(13,33,28,.05); }
+.live-bench { border-color: rgba(217,225,223,.82); background: #f6faf8; }
+.goal-picker-modal, .roster-picker-modal, .auth-card, dialog { border-radius: 8px; box-shadow: 0 30px 90px rgba(5,20,16,.28); }
+
+@media (max-width: 1100px) {
+  .brand { background: transparent; }
+}
+@media (max-width: 760px) {
+  .view { padding: 14px; }
+  .sidebar { box-shadow: 0 -12px 36px rgba(6,31,25,.16); }
+  .topbar { padding: 14px; }
+  .match-live-screen { padding: 10px; background: linear-gradient(180deg, #061b17 0%, #0a1b22 44%, #eef3f7 44%); }
+  .live-control-card { min-height: auto; }
+  .live-score-card strong, .live-clock-card strong { font-size: 58px; }
+  .live-pitch .pitch-player { width: 60px; height: 60px; }
+}
