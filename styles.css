@@ -483,6 +483,8 @@ body.matchday-live-active .topbar { display: none; }
 .pitch-player { background: rgba(255,255,255,.26); box-shadow: 0 12px 24px rgba(0,0,0,.24); }
 .live-pitch .pitch-player { width: 82px; height: 82px; }
 .player-time { background: rgba(5,30,23,.9); }
+.bench-slot .bench-time { background: #e8f6ee; color: var(--green-dark); border: 1px solid rgba(0,138,70,.18); box-shadow: none; }
+.live-bench .bench-time { background: #0b3a2b; color: #fff; border-color: rgba(255,255,255,.18); box-shadow: 0 6px 14px rgba(5,30,23,.12); }
 .bench-slot { box-shadow: 0 8px 20px rgba(13,33,28,.05); }
 .live-bench { border-color: rgba(217,225,223,.82); background: #f6faf8; }
 .goal-picker-modal, .roster-picker-modal, .auth-card, dialog { border-radius: 8px; box-shadow: 0 30px 90px rgba(5,20,16,.28); }
