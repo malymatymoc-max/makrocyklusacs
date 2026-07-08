@@ -1,6 +1,9 @@
 (function () {
   let playerDialogTeamId = "";
   const openRosterTeamIds = new Set();
+  const PLAYER_BACKUP_KEY = "coach-acs-player-backup-latest";
+  const PLAYER_BACKUP_META_KEY = "coach-acs-player-backup-meta";
+  const PLAYER_BACKUP_ROW_ID = "players_backup_latest";
 
   function migratePlayers(nextState = state) {
     const next = { ...blank(), ...(nextState && typeof nextState === "object" ? nextState : {}) };
@@ -45,6 +48,7 @@
 
     if (!state.teams.length) {
       grid.innerHTML = `<div class="muted">Nejdřív vytvoř tým v nastavení.</div>`;
+      bindPlayerTools();
       return;
     }
 
@@ -89,6 +93,94 @@
         renderPlayers();
       });
     });
+    bindPlayerTools();
+  }
+
+  function bindPlayerTools() {
+    const exportButton = document.querySelector("#exportPlayers");
+    const backupButton = document.querySelector("#backupPlayersNow");
+    if (exportButton && !exportButton.dataset.bound) {
+      exportButton.dataset.bound = "1";
+      exportButton.addEventListener("click", exportPlayers);
+    }
+    if (backupButton && !backupButton.dataset.bound) {
+      backupButton.dataset.bound = "1";
+      backupButton.addEventListener("click", async () => {
+        const snapshot = backupPlayersSnapshot("manual");
+        try {
+          const remoteSaved = await savePlayerBackupRemote(snapshot);
+          window.alert(remoteSaved ? "Záloha hráček je uložená." : "Lokální záloha je uložená v tomto zařízení.");
+        } catch {
+          window.alert("Lokální záloha je uložená v tomto zařízení. Online záloha se teď nepodařila.");
+        }
+      });
+    }
+  }
+
+  function buildPlayersSnapshot(reason = "manual") {
+    return {
+      version: 1,
+      reason,
+      createdAt: new Date().toISOString(),
+      teams: (state.teams || []).map((team) => ({ id: team.id, name: team.name || "", color: team.color || "" })),
+      players: (state.players || []).map((player) => ({
+        id: player.id,
+        teamId: player.teamId || "",
+        firstName: player.firstName || "",
+        lastName: player.lastName || "",
+        birthDate: player.birthDate || "",
+        photoData: player.photoData || "",
+      })),
+    };
+  }
+
+  function backupPlayersSnapshot(reason = "auto") {
+    const snapshot = buildPlayersSnapshot(reason);
+    try {
+      localStorage.setItem(PLAYER_BACKUP_KEY, JSON.stringify(snapshot));
+      localStorage.setItem(PLAYER_BACKUP_META_KEY, JSON.stringify({
+        createdAt: snapshot.createdAt,
+        playerCount: snapshot.players.length,
+        teamCount: snapshot.teams.length,
+        reason,
+      }));
+    } catch {
+      try {
+        const lightSnapshot = {
+          ...snapshot,
+          players: snapshot.players.map((player) => ({ ...player, photoData: "" })),
+          note: "Fotky nebyly uložené kvůli omezenému místu v zařízení.",
+        };
+        localStorage.setItem(PLAYER_BACKUP_KEY, JSON.stringify(lightSnapshot));
+      } catch {}
+    }
+    savePlayerBackupRemote(snapshot).catch(() => {});
+    return snapshot;
+  }
+
+  async function savePlayerBackupRemote(snapshot) {
+    if (typeof SUPABASE_URL === "undefined" || typeof SUPABASE_KEY === "undefined" || !SUPABASE_URL || !SUPABASE_KEY) return false;
+    if (typeof supabaseRestUrl !== "function" || typeof supabaseHeaders !== "function") return false;
+    const response = await fetch(`${supabaseRestUrl()}?on_conflict=id`, {
+      method: "POST",
+      headers: { ...supabaseHeaders(), "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify({ id: PLAYER_BACKUP_ROW_ID, state: snapshot, updated_at: new Date().toISOString() }),
+    });
+    if (!response.ok) throw new Error("Player backup failed");
+    return true;
+  }
+
+  function exportPlayers() {
+    const snapshot = buildPlayersSnapshot("export");
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json;charset=utf-8" });
+    const link = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-");
+    link.href = URL.createObjectURL(blob);
+    link.download = `coach-acs-hracky-${stamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   }
 
   function openPlayerDialog(teamId, id = "") {
@@ -223,9 +315,23 @@
     playersEnsureSelection();
   };
 
+  const playersSaveDialog = window.saveDialog;
+  saveDialog = function saveDialogWithPlayerBackup() {
+    if (dialog?.type === "player") backupPlayersSnapshot(dialog.id ? "before-player-edit" : "before-player-create");
+    return playersSaveDialog();
+  };
+
+  const playersDeleteDialogEntity = window.deleteDialogEntity;
+  deleteDialogEntity = function deleteDialogEntityWithPlayerBackup() {
+    if (dialog?.type === "player") backupPlayersSnapshot("before-player-delete");
+    return playersDeleteDialogEntity();
+  };
+
   window.playersForTeam = playersForTeam;
   window.playerName = playerName;
   window.playerInitials = initials;
+  window.backupPlayersSnapshot = backupPlayersSnapshot;
+  window.exportPlayers = exportPlayers;
 
   try {
     state = migratePlayers(state);

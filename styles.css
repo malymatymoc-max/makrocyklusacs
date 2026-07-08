@@ -150,6 +150,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); box-shad
 .circle span { width: 68px; height: 68px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-weight: 900; }
 
 .players-grid { display: grid; gap: 14px; padding: 16px; }
+.team-tools { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.team-tools button { min-height: 36px; }
 .team-roster-card { border: 1px solid var(--line); border-radius: 8px; background: #fff; overflow: hidden; }
 .team-roster-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line); background: #fbfdfb; }
 .team-roster-title { display: flex; align-items: center; gap: 8px; min-width: 0; }

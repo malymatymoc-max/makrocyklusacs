@@ -937,6 +937,8 @@ function isReadOnlyAllowed(target) {
     "#sessionDone",
     "#dialogClose",
     "#dialogCancel",
+    "#exportPlayers",
+    "#backupPlayersNow",
     "#newSessionClose",
     "#newSessionCancel",
     "#logoutDevice",
